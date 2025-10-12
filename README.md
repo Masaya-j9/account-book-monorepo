@@ -70,30 +70,47 @@ npm install
 
 ### データベースのセットアップ
 
-#### PostgreSQL のインストール
+#### 方法 1: Docker Compose を使用（推奨）
+
+Docker Compose を使用すると、PostgreSQL を簡単にセットアップできます。
 
 ```shell
-# Homebrewを使用する場合
-brew install postgresql@15
-brew services start postgresql@15
+# PostgreSQLコンテナを起動
+docker compose up -d
+
+# コンテナの状態を確認
+docker compose ps
+
+# ログを確認
+docker compose logs postgres
+
+# コンテナを停止
+docker compose down
+
+# データを削除してコンテナを停止
+docker compose down -v
 ```
 
-#### データベースの作成
+環境変数の設定：
 
 ```shell
-# PostgreSQLに接続
-psql postgres
+# .env.exampleをコピーして.envファイルを作成
+cp .env.example .env
 
-# データベースを作成
-CREATE DATABASE account_book_app;
+# 必要に応じて.envファイルを編集
 ```
+
+デフォルトの接続情報：
+
+- **接続 URL**: `postgresql://postgres:postgres@localhost:5432/account_book_app`
+
 
 #### 環境変数の設定
 
 `.env`ファイルを作成して、データベース接続情報を設定します：
 
 ```env
-DATABASE_URL="postgresql://username:password@localhost:5432/account_book_app"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/account_book_app"
 ```
 
 #### マイグレーションの実行
