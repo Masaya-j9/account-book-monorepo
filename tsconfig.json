@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "skipLibCheck": true
+  },
+  "files": [],
+  "references": [{ "path": "./apps/backend" }, { "path": "./apps/frontend" }]
+}

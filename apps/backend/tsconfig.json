@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "target": "ESNext",
+    "module": "NodeNext",
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "ignoreDeprecations": "5.0",
+    "types": ["node"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "outDir": "./dist",
+    "paths": {
+      "@account-book-app/shared": ["../../packages/shared/src"],
+      "@account-book-app/shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "exclude": ["node_modules"]
+}
