@@ -11,7 +11,11 @@
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "test": "turbo run test",
+    "test:ui": "turbo run test:ui",
+    "test:run": "turbo run test:run"
   },
   "keywords": [],
   "author": "",

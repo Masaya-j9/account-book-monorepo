@@ -33,11 +33,14 @@ account-book-app/
 - **Turbopack** - 高速バンドラー
 - **Tailwind CSS** - ユーティリティファースト CSS フレームワーク
 - **Biome** - リンター・フォーマッター
+- **Vitest** - 高速ユニットテストフレームワーク
+- **Testing Library** - React コンポーネントテスト
 
 ### バックエンド (`app/backend`)
 
 - **Hono** - 高速軽量な Web フレームワーク
 - **tsx** - TypeScript 実行環境（開発用）
+- **Vitest** - 高速ユニットテストフレームワーク
 
 ### データベース (`packages/db`)
 
@@ -135,6 +138,93 @@ npm run build --filter=frontend
 npm run build --filter=backend
 ```
 
+## コード品質管理
+
+### リント（Lint）
+
+Biome を使用してコードの品質チェックを行います。
+
+```shell
+# すべてのワークスペースでリントを並列実行
+npm run lint
+
+# フロントエンドのみリント
+npm run lint --filter=frontend
+
+# バックエンドのみリント
+npm run lint --filter=backend
+```
+
+### フォーマット（Format）
+
+Biome を使用してコードを自動フォーマットします。
+
+```shell
+# すべてのワークスペースでフォーマットを並列実行
+npm run format
+
+# フロントエンドのみフォーマット
+npm run format --filter=frontend
+
+# バックエンドのみフォーマット
+npm run format --filter=backend
+```
+
+### テスト（Test）
+
+Vitest を使用してユニットテストを実行します。
+
+```shell
+# すべてのワークスペースでテストを並列実行（ワッチモード）
+npm test
+
+# すべてのワークスペースでテストを一度だけ実行（CI/CD向け）
+npm run test:run
+
+# すべてのワークスペースでテストをUIモードで実行（ブラウザで結果確認）
+npm run test:ui
+
+# フロントエンドのみテスト
+npm test --filter=frontend
+
+# バックエンドのみテスト
+npm test --filter=backend
+```
+
+#### テストファイルの命名規則
+
+- テストファイルは `*.test.ts` または `*.test.tsx` の命名規則に従います
+- テスト対象ファイルと同じディレクトリに配置することを推奨
+
+例：
+
+```
+src/
+  ├── utils.ts
+  ├── utils.test.ts        # ユーティリティのテスト
+  └── components/
+      ├── Button.tsx
+      └── Button.test.tsx   # コンポーネントのテスト
+```
+
+### 推奨ワークフロー
+
+開発中は以下のコマンドを定期的に実行することを推奨します：
+
+```shell
+# 1. コードをフォーマット
+npm run format
+
+# 2. リントでエラーチェック
+npm run lint
+
+# 3. テストを実行
+npm run test:run
+
+# 4. ビルドして型チェック
+npm run build
+```
+
 ## 共有パッケージの使用方法
 
 `packages/shared`は、フロントエンドとバックエンドの両方から参照できる共通のコードを格納しています。
@@ -209,6 +299,53 @@ await db.delete(users).where(eq(users.id, 1));
 
 ## 開発のヒント
 
-- **Turborepo のキャッシュ**: ビルドやテストの結果がキャッシュされ、2 回目以降の実行が高速化されます
-- **並列実行**: `--parallel`フラグにより、複数のタスクが並列で実行されます
-- **フィルター**: `--filter`オプションで特定のパッケージのみを対象に実行できます
+### Turborepo の機能
+
+- **並列実行**:
+
+  - `npm run dev` - フロントエンドとバックエンドが同時に起動
+  - `npm run lint` - すべてのワークスペースで並列にリント実行
+  - `npm run format` - すべてのワークスペースで並列にフォーマット実行
+  - `npm run test:run` - すべてのワークスペースで並列にテスト実行
+  - 複数のタスクを効率的に実行し、開発時間を短縮
+
+- **キャッシュ機能**:
+
+  - ビルドやリントの結果がキャッシュされ、変更がない場合は再実行をスキップ
+  - 2 回目以降の実行が劇的に高速化
+
+- **依存関係の自動解決**:
+  - `dependsOn`で定義された依存タスクを自動的に実行
+  - 例：`build`タスクは依存パッケージのビルドを先に実行
+
+### フィルターオプション
+
+特定のワークスペースのみを対象にタスクを実行：
+
+```shell
+# 単一ワークスペース
+npm run dev --filter=frontend
+npm run lint --filter=backend
+
+# 複数ワークスペース
+npm run build --filter=frontend --filter=backend
+
+# パターンマッチング
+npm run lint --filter=apps/*
+```
+
+### 便利なコマンド組み合わせ
+
+```shell
+# 開発開始時（すべてのサーバーを起動）
+npm run dev
+
+# コミット前（フォーマット→リント→テスト→ビルド）
+npm run format && npm run lint && npm run test:run && npm run build
+
+# 特定のアプリのみ再起動
+npm run dev --filter=backend
+
+# テストをウォッチモードで実行しながら開発
+npm test  # 別ターミナルで実行
+```

@@ -6,22 +6,30 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
     "lint": "biome check",
     "format": "biome format --write"
   },
   "dependencies": {
-    "@account-book-app/shared": "workspace:*",
+    "@account-book-app/shared": "file:../../packages/shared",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "next": "15.5.4"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@biomejs/biome": "2.2.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@tailwindcss/postcss": "^4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^25.0.1",
     "tailwindcss": "^4",
-    "@biomejs/biome": "2.2.0"
+    "typescript": "^5",
+    "vitest": "^2.1.8"
   }
 }

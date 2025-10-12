@@ -9,6 +9,20 @@
       "cache": false,
       "persistent": true
     },
-    "lint": {}
+    "lint": {
+      "cache": false
+    },
+    "format": {
+      "cache": false
+    },
+    "test": {
+      "cache": false
+    },
+    "test:ui": {
+      "cache": false
+    },
+    "test:run": {
+      "cache": false
+    }
   }
 }
