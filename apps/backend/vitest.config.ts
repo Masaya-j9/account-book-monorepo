@@ -1,5 +1,5 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
-import path from "path";
 
 export default defineConfig({
   test: {
@@ -9,7 +9,7 @@ export default defineConfig({
     alias: {
       "@account-book-app/shared": path.resolve(
         __dirname,
-        "../../packages/shared/src"
+        "../../packages/shared/src",
       ),
     },
   },
