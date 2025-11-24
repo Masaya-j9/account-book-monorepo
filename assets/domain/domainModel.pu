@@ -1,0 +1,284 @@
+@startuml 家計簿アプリ - ドメインモデル図
+
+' スタイル設定
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor WhiteSmoke
+  BorderColor Black
+  ArrowColor Black
+}
+
+' =====================================
+' ユーザー管理コンテキスト
+' =====================================
+
+package "ユーザー管理コンテキスト" {
+
+  class User <<Entity>> {
+    + id: string
+    + email: string
+    + passwordHash: string
+    + name: string
+    + createdAt: datetime
+    + updatedAt: datetime
+    --
+    + register()
+    + login()
+    + logout()
+    + updateProfile()
+  }
+
+}
+
+' =====================================
+' 収支管理コンテキスト
+' =====================================
+
+package "収支管理コンテキスト" {
+
+  class Transaction <<Entity>> {
+    + id: string
+    + userId: string
+    + type: TransactionType
+    + title: string
+    + amount: Money
+    + date: Date
+    + categoryId: string
+    + memo: string
+    + createdAt: datetime
+    + updatedAt: datetime
+    --
+    + create()
+    + update()
+    + delete()
+  }
+
+  class TransactionType <<Enumeration>> {
+    INCOME
+    EXPENSE
+  }
+
+  class Money <<Value Object>> {
+    + amount: number
+    + currency: string
+    --
+    + add(Money): Money
+    + subtract(Money): Money
+    + multiply(number): Money
+    + divide(number): Money
+  }
+
+  class Date <<Value Object>> {
+    + year: number
+    + month: number
+    + day: number
+    --
+    + format(): string
+    + isSameMonth(Date): boolean
+  }
+
+  class Category <<Entity>> {
+    + id: string
+    + name: string
+    + type: TransactionType
+    + isDefault: boolean
+    + userId: string?
+    --
+    + create()
+    + update()
+    + delete()
+  }
+
+  class Period <<Value Object>> {
+    + type: PeriodType
+    + year: number
+    + month: number?
+    --
+    + format(): string
+    + contains(date: Date): boolean
+  }
+
+  enum PeriodType <<Enumeration>> {
+    MONTHLY
+    YEARLY
+  }
+
+  abstract class Summary <<Value Object>> {
+    + userId: string
+    + period: Period
+    + totalIncome: Money
+    + totalExpense: Money
+    + balance: Money
+    --
+    + {abstract} calculate(Transaction[]): Summary
+  }
+
+  class MonthlySummary <<Value Object>> {
+    --
+    + calculate(Transaction[]): MonthlySummary
+  }
+
+  class YearlySummary <<Value Object>> {
+    + monthlySummaries: MonthlySummary[]
+    --
+    + calculate(Transaction[]): YearlySummary
+    + getMonthSummary(month: number): MonthlySummary
+    + getAverageMonthlyExpense(): Money
+    + getHighestExpenseMonth(): number
+  }
+
+}
+
+' =====================================
+' 関連（リレーションシップ）
+' =====================================
+
+' ユーザーと収支の関係
+User "1" -- "0..*" Transaction : 所有する >
+note on link
+  1人のユーザーは
+  複数の収支を持つ
+end note
+
+' 収支とカテゴリの関係（集約間の参照）
+Transaction "0..*" --> "1" Category : 参照する >
+note on link
+  収支はカテゴリIDで参照
+  （集約間の関連）
+end note
+
+' 収支と収支種別の関係
+Transaction --> TransactionType : 持つ >
+
+' 収支と金額の関係
+Transaction *-- Money : 含む >
+note on link
+  収支は金額を
+  値オブジェクトとして持つ
+end note
+
+' 収支と日付の関係
+Transaction *-- Date : 含む >
+
+' ユーザーとカテゴリの関係（利用可能性）
+User "0..*" ..> "0..*" Category : 利用可能 >
+note on link
+  ユーザーは共通カテゴリと
+  自分が作成したカスタムカテゴリを
+  利用できる（所有関係ではない）
+end note
+
+' サマリーの継承関係
+Summary <|-- MonthlySummary
+Summary <|-- YearlySummary
+
+' サマリーと期間の関係
+Summary *-- Period : 含む >
+
+' 期間と期間種別の関係
+Period --> PeriodType : 持つ >
+
+' 年間サマリーと月次サマリーの関係
+YearlySummary *-- "12" MonthlySummary : 含む >
+note on link
+  年間サマリーは
+  12ヶ月分の月次サマリーを含む
+end note
+
+' ユーザーとサマリーの関係
+User "1" -- "0..*" Summary : 集計される >
+
+' サマリーは収支から計算される
+Summary ..> Transaction : <<算出元>>
+note on link
+  収支データから
+  サマリーを計算
+end note
+
+' =====================================
+' 集約の境界
+' =====================================
+
+note as AggregateNote1
+  **【集約】User**
+  - ユーザーエンティティが集約ルート
+  - ユーザー情報の一貫性を保証
+end note
+
+note as AggregateNote2
+  **【集約】Transaction**
+  - 収支エンティティが集約ルート
+  - 収支・金額・日付の一貫性を保証
+  - categoryIdでCategoryを参照（IDのみ保持）
+  - Categoryエンティティは含まない
+end note
+
+note as AggregateNote3
+  **【集約】Category（独立した集約）**
+  - カテゴリエンティティが集約ルート
+  - Transactionから参照される
+  - userIdは作成者情報（nullなら共通カテゴリ）
+  - ユーザーとの関係は「利用可能性」
+end note
+
+AggregateNote1 .. User
+AggregateNote2 .. Transaction
+AggregateNote3 .. Category
+
+' =====================================
+' ドメイン制約・ビジネスルール
+' =====================================
+
+note bottom of Transaction
+  **【ビジネスルール】**
+  - タイトルは必須（最大100文字）
+  - 金額は0より大きい必須
+  - 日付は未来日を許可しない
+  - 収入はINCOME、支出はEXPENSE
+  - メモは任意（最大500文字）
+  - カテゴリは必須
+end note
+
+note bottom of Money
+  **【不変条件】**
+  - 金額は0以上
+  - 通貨コードは"JPY"固定（初期版）
+  - 小数点以下は扱わない
+end note
+
+note bottom of Category
+  **【ビジネスルール】**
+  - デフォルトカテゴリは削除不可
+  - カスタムカテゴリは作成ユーザーのみ編集可
+  - 名前は重複不可（同一ユーザー内）
+
+  **【利用可能性の判定】**
+  - userId = null → 全ユーザーが利用可能
+  - userId = 特定ID → そのユーザーのみ利用可能
+
+  **【初期カテゴリ例】**
+  支出: 食費、交通費、日用品、娯楽、その他
+  収入: 給与、副業、その他
+end note
+
+note bottom of Summary
+  **【抽象クラス】**
+  - 月次・年間などの期間サマリーの基底クラス
+  - 共通のプロパティと計算ロジックを提供
+end note
+
+note bottom of Period
+  **【不変条件】**
+  - MONTHLYの場合はmonthが必須
+  - YEARLYの場合はmonthはnull
+  - yearは必須
+end note
+
+note bottom of YearlySummary
+  **【集計機能】**
+  - 12ヶ月分の月次サマリーを内包
+  - 月別の詳細データにアクセス可能
+  - 年間の平均値、最大値などを計算
+end note
+
+@enduml
