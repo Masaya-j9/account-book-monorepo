@@ -1,0 +1,101 @@
+@startuml 家計簿アプリ - ユースケース図（ミニマム版）
+
+' スタイル設定
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+' アクター定義
+actor "ユーザー" as User
+
+' =====================================
+' 境界づけられたコンテキスト: ユーザー管理
+' =====================================
+package "ユーザー管理コンテキスト" {
+  usecase "ユーザー登録" as UC_Register
+  usecase "ログイン" as UC_Login
+  usecase "ログアウト" as UC_Logout
+}
+
+' =====================================
+' 境界づけられたコンテキスト: 収支管理
+' =====================================
+package "収支管理コンテキスト" {
+  usecase "収入を記録する" as UC_AddIncome
+  usecase "支出を記録する" as UC_AddExpense
+  usecase "収支を編集する" as UC_EditTransaction
+  usecase "収支を削除する" as UC_DeleteTransaction
+  usecase "収支の一覧を表示する" as UC_ListTransactions
+  usecase "月次サマリーを表示する" as UC_MonthlySummary
+}
+
+' =====================================
+' アクターとユースケースの関連
+' =====================================
+
+' ユーザー管理
+User --> UC_Register
+User --> UC_Login
+User --> UC_Logout
+
+' 収支管理
+User --> UC_AddIncome
+User --> UC_AddExpense
+User --> UC_EditTransaction
+User --> UC_DeleteTransaction
+User --> UC_ListTransactions
+User --> UC_MonthlySummary
+
+' =====================================
+' ユースケース間の関係
+' =====================================
+
+' 月次サマリーは収支一覧を含む
+UC_MonthlySummary ..> UC_ListTransactions : <<include>>
+
+' =====================================
+' 認証要件の注釈
+' =====================================
+
+note as AuthNote
+  **【認証要件】**
+  収支管理コンテキストの全機能は
+  ログイン認証が必須の前提条件
+
+  - 収入を記録する
+  - 支出を記録する
+  - 収支を編集する
+  - 収支を削除する
+  - 収支の一覧を表示する
+  - 月次サマリーを表示する
+end note
+
+AuthNote .. UC_Login
+
+note right of "ユーザー管理コンテキスト"
+  **責務:**
+  - ユーザーの認証・認可
+  - セッション管理
+
+  **実装:**
+  - JWT認証
+  - パスワードハッシュ化
+end note
+
+note right of "収支管理コンテキスト"
+  **責務:**
+  - 収支データのCRUD操作
+  - 基本的な集計機能
+
+  **実装:**
+  - 収支の記録・編集・削除
+  - 一覧表示（日付、金額、メモ）
+  - 月次の収入・支出・残高計算
+
+  **カテゴリ:**
+  初期は固定カテゴリ（食費、交通費など）
+
+  **前提条件:**
+  全機能でログイン認証が必要
+end note
+
+@enduml
