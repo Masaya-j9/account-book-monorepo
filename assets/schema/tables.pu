@@ -39,6 +39,18 @@ entity "currencies" {
 }
 
 ' =====================================
+' 取引タイプマスター
+' =====================================
+
+entity "transaction_types" {
+  * code: VARCHAR(10) <<PK>>
+  --
+  * name: VARCHAR(20)
+  * created_at: TIMESTAMP
+  * updated_at: TIMESTAMP
+}
+
+' =====================================
 ' カテゴリ管理
 ' =====================================
 
@@ -46,12 +58,10 @@ entity "categories" {
   * id: INTEGER <<PK, AUTO_INCREMENT>>
   --
   * name: VARCHAR(50) <<UNIQUE>>
-  * type: VARCHAR(10)
+  * type_code: VARCHAR(10) <<FK>>
   * is_default: BOOLEAN
   * created_at: TIMESTAMP
   * updated_at: TIMESTAMP
-  --
-  CHECK (type IN ('INCOME', 'EXPENSE'))
 }
 
 ' =====================================
@@ -63,11 +73,20 @@ entity "user_categories" {
   * category_id: INTEGER <<PK, FK>>
   --
   * is_visible: BOOLEAN
-  custom_name: VARCHAR(50)
+  custom_name: VARCHAR(50) (nullable)
   display_order: INTEGER
   * created_at: TIMESTAMP
   * updated_at: TIMESTAMP
   deleted_at: TIMESTAMP
+}
+
+' =====================================
+' 取引カテゴリ（中間テーブル）
+' =====================================
+
+entity "transaction_categories" {
+  * transaction_id: INTEGER <<PK, FK>>
+  * category_id: INTEGER <<PK, FK>>
 }
 
 ' =====================================
@@ -78,18 +97,16 @@ entity "transactions" {
   * id: INTEGER <<PK, AUTO_INCREMENT>>
   --
   * user_id: INTEGER <<FK>>
-  * type: VARCHAR(10)
+  * type_code: VARCHAR(10) <<FK>>
   * title: VARCHAR(100)
   * amount: INTEGER
   * currency_code: VARCHAR(3) <<FK>>
   * date: DATE
-  * category_id: INTEGER <<FK>>
   memo: TEXT
   * created_at: TIMESTAMP
   * updated_at: TIMESTAMP
   deleted_at: TIMESTAMP
   --
-  CHECK (type IN ('INCOME', 'EXPENSE'))
   CHECK (amount > 0)
 }
 
@@ -112,6 +129,20 @@ note right of currencies
   - 初期版ではJPYのみactive
 end note
 
+note right of transaction_types
+  **【マスターデータ】**
+  - 取引タイプの固定値を管理
+
+  **【初期データ】**
+  - INCOME (収入)
+  - EXPENSE (支出)
+
+  **【設計判断】**
+  - CHECK制約ではなくマスタテーブルで管理
+  - 将来的な拡張性（振替、調整等）に対応
+  - データの整合性を外部キー制約で保証
+end note
+
 note right of users
   **【インデックス】**
   - email (UNIQUE)
@@ -130,12 +161,13 @@ end note
 note right of categories
   **【インデックス】**
   - name (UNIQUE)
-  - type
+  - type_code
 
   **【ビジネスルール】**
   - 全ユーザー共通のマスターデータ
   - is_default = true: システム標準カテゴリ（削除不可）
   - is_default = false: 管理者が追加したカテゴリ
+  - type_code で取引タイプと関連付け
 
   **【初期データ】**
   支出: 食費、交通費、日用品、娯楽、その他
@@ -159,10 +191,20 @@ note right of user_categories
   - display_orderはカテゴリIDの昇順
 end note
 
+note right of transaction_categories
+  **【インデックス】**
+  - (transaction_id, category_id) PK
+  - transaction_id
+  - category_id
+
+  **【ビジネスルール】**
+  - 1つの取引に複数カテゴリを関連付け可能
+  - カテゴリ別集計時に使用
+end note
+
 note right of transactions
   **【インデックス】**
   - user_id
-  - category_id
   - currency_code
   - (user_id, date)
   - date
@@ -172,6 +214,7 @@ note right of transactions
   - タイトルは必須（最大100文字）
   - 未来日は許可しない（アプリ層で検証）
   - amount は整数のみ（小数点以下なし）
+  - カテゴリは中間テーブルで管理（多対多）
 
   **【論理削除】**
   - deleted_at = NULL: 有効な取引
@@ -182,7 +225,6 @@ note right of transactions
   **【パフォーマンス】**
   - 月次集計のため (user_id, date) にインデックス
   - 日付範囲検索のため date にインデックス
-  - カテゴリ別集計のため category_id にインデックス
 end note
 
 @enduml

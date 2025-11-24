@@ -22,11 +22,18 @@ skinparam class {
 users ||--o{ transactions
 users ||--o{ user_categories
 
-' 2. カテゴリ関連
-categories ||--o{ user_categories
-categories ||--o{ transactions
+' 2. 取引タイプ関連
+transaction_types ||--o{ categories
+transaction_types ||--o{ transactions
 
-' 3. 通貨関連
+' 3. カテゴリ関連
+categories ||--o{ user_categories
+categories ||--o{ transaction_categories
+
+' 4. 取引カテゴリ関連
+transactions ||--o{ transaction_categories
+
+' 5. 通貨関連
 currencies ||--o{ transactions
 
 ' =====================================
@@ -43,15 +50,36 @@ note as ForeignKeyNote
   │   ON UPDATE: CASCADE                        │
   │   理由: ユーザー削除時に収支も削除          │
   ├─────────────────────────────────────────────┤
-  │ category_id → categories.id                 │
+  │ type_code → transaction_types.code         │
   │   ON DELETE: RESTRICT                       │
   │   ON UPDATE: CASCADE                        │
-  │   理由: 使用中カテゴリは削除不可            │
+  │   理由: マスターデータは削除不可              │
   ├─────────────────────────────────────────────┤
   │ currency_code → currencies.code             │
   │   ON DELETE: RESTRICT                       │
   │   ON UPDATE: CASCADE                        │
   │   理由: 使用中通貨は削除不可                │
+  └─────────────────────────────────────────────┘
+
+  **categories テーブル**
+  ┌─────────────────────────────────────────────┐
+  │ type_code → transaction_types.code         │
+  │   ON DELETE: RESTRICT                       │
+  │   ON UPDATE: CASCADE                        │
+  │   理由: マスターデータは削除不可              │
+  └─────────────────────────────────────────────┘
+
+  **transaction_categories テーブル**
+  ┌─────────────────────────────────────────────┐
+  │ transaction_id → transactions.id            │
+  │   ON DELETE: CASCADE                        │
+  │   ON UPDATE: CASCADE                        │
+  │   理由: 取引削除時にカテゴリ関連も削除      │
+  ├─────────────────────────────────────────────┤
+  │ category_id → categories.id                 │
+  │   ON DELETE: RESTRICT                       │
+  │   ON UPDATE: CASCADE                        │
+  │   理由: 使用中カテゴリは削除不可            │
   └─────────────────────────────────────────────┘
 
   **user_categories テーブル**
@@ -78,7 +106,7 @@ note as DataIntegrityNote
   **カテゴリ削除時の考慮事項:**
   1. デフォルトカテゴリ (is_default=true) は削除不可
   2. 使用中のカテゴリは削除不可
-  3. 削除前にtransactionsとuser_categoriesへの参照確認が必要
+  3. 削除前にtransaction_categoriesとuser_categoriesへの参照確認が必要
 
   **ユーザー削除時の動作:**
   1. 関連するtransactionsを全て削除
