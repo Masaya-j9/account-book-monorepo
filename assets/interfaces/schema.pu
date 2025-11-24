@@ -1,0 +1,441 @@
+@startuml 家計簿アプリ - API インターフェース設計 (tRPC)
+
+' スタイル設定
+skinparam packageStyle rectangle
+skinparam class {
+  BackgroundColor WhiteSmoke
+  BorderColor Black
+  ArrowColor Black
+}
+
+' =====================================
+' 認証関連 Router
+' =====================================
+
+package "auth" <<Router>> {
+
+  class "auth.register" <<Mutation>> {
+    **Input:**
+    + email: string
+    + password: string
+    + name: string
+    --
+    **Output:**
+    + user: User
+    + token: string
+    --
+    **Errors:**
+    - EMAIL_ALREADY_EXISTS
+    - INVALID_EMAIL_FORMAT
+    - WEAK_PASSWORD
+    --
+    **Note:**
+    - ユーザー登録時に全カテゴリを
+      user_categoriesに自動登録
+  }
+
+  class "auth.login" <<Mutation>> {
+    **Input:**
+    + email: string
+    + password: string
+    --
+    **Output:**
+    + user: User
+    + token: string
+    --
+    **Errors:**
+    - INVALID_CREDENTIALS
+    - USER_NOT_FOUND
+  }
+
+  class "auth.logout" <<Mutation>> {
+    **Input:**
+    + (認証トークンのみ)
+    --
+    **Output:**
+    + success: boolean
+  }
+}
+
+' =====================================
+' カテゴリ関連 Router
+' =====================================
+
+package "categories" <<Router>> {
+
+  class "categories.list" <<Query>> {
+    **Input:**
+    + type?: TransactionType
+    + includeHidden?: boolean
+    --
+    **Output:**
+    + categories: UserCategory[]
+    --
+    **Note:**
+    - ユーザーの表示設定を反映
+    - display_order順でソート
+  }
+
+  class "categories.getById" <<Query>> {
+    **Input:**
+    + id: number
+    --
+    **Output:**
+    + category: UserCategory
+    --
+    **Errors:**
+    - CATEGORY_NOT_FOUND
+  }
+
+  class "categories.update" <<Mutation>> {
+    **Input:**
+    + categoryId: number
+    + isVisible: boolean
+    + customName?: string
+    + displayOrder?: number
+    --
+    **Output:**
+    + category: UserCategory
+    --
+    **Errors:**
+    - UNAUTHORIZED
+    - CATEGORY_NOT_FOUND
+  }
+
+  class "categories.reorder" <<Mutation>> {
+    **Input:**
+    + categoryOrders: { categoryId: number, order: number }[]
+    --
+    **Output:**
+    + success: boolean
+    --
+    **Errors:**
+    - UNAUTHORIZED
+  }
+}
+
+' =====================================
+' 取引関連 Router
+' =====================================
+
+package "transactions" <<Router>> {
+
+  class "transactions.create" <<Mutation>> {
+    **Input:**
+    + type: TransactionType
+    + title: string
+    + amount: number
+    + currencyCode: string
+    + date: Date
+    + categoryId: number
+    + memo?: string
+    --
+    **Output:**
+    + transaction: Transaction
+    --
+    **Errors:**
+    - UNAUTHORIZED
+    - INVALID_AMOUNT
+    - FUTURE_DATE_NOT_ALLOWED
+    - CATEGORY_NOT_FOUND
+  }
+
+  class "transactions.update" <<Mutation>> {
+    **Input:**
+    + id: number
+    + type?: TransactionType
+    + title?: string
+    + amount?: number
+    + date?: Date
+    + categoryIds?: number[]
+    + memo?: string
+    --
+    **Output:**
+    + transaction: Transaction
+    --
+    **Errors:**
+    - UNAUTHORIZED
+    - TRANSACTION_NOT_FOUND
+    - NOT_OWNER
+  }
+
+  class "transactions.delete" <<Mutation>> {
+    **Input:**
+    + id: number
+    --
+    **Output:**
+    + success: boolean
+    --
+    **Errors:**
+    - UNAUTHORIZED
+    - TRANSACTION_NOT_FOUND
+    - NOT_OWNER
+  }
+
+  class "transactions.list" <<Query>> {
+    **Input:**
+    + startDate?: string
+    + endDate?: string
+    + type?: TransactionType
+    + categoryIds?: number[]
+    + page: number (default: 1)
+    + limit: number (default: 20)
+    --
+    **Output:**
+    + transactions: Transaction[]
+    + pagination: Pagination
+    --
+    **Note:**
+    - deleted_at IS NULL のみ取得
+    - 日付降順でソート
+    - offset = (page - 1) * limit
+  }
+
+  class "transactions.getById" <<Query>> {
+    **Input:**
+    + id: number
+    --
+    **Output:**
+    + transaction: Transaction
+    --
+    **Errors:**
+    - UNAUTHORIZED
+    - TRANSACTION_NOT_FOUND
+    - NOT_OWNER
+  }
+}
+
+' =====================================
+' サマリー関連 Router
+' =====================================
+
+package "summary" <<Router>> {
+
+  class "summary.monthly" <<Query>> {
+    **Input:**
+    + year: number
+    + month: number
+    --
+    **Output:**
+    + summary: MonthlySummary
+    --
+    **Note:**
+    - 指定月の収支を集計
+    - カテゴリ別の内訳を含む
+  }
+
+  class "summary.yearly" <<Query>> {
+    **Input:**
+    + year: number
+    --
+    **Output:**
+    + summary: YearlySummary
+    --
+    **Note:**
+    - 12ヶ月分の月次サマリーを含む
+    - 年間合計と平均を計算
+  }
+
+  class "summary.byCategory" <<Query>> {
+    **Input:**
+    + startDate: string
+    + endDate: string
+    + type?: TransactionType
+    --
+    **Output:**
+    + categories: CategorySummary[]
+    --
+    **Note:**
+    - カテゴリごとの合計金額
+    - 割合（パーセンテージ）を含む
+  }
+}
+
+' =====================================
+' 通貨関連 Router
+' =====================================
+
+package "currencies" <<Router>> {
+
+  class "currencies.list" <<Query>> {
+    **Input:**
+    + activeOnly?: boolean
+    --
+    **Output:**
+    + currencies: Currency[]
+    --
+    **Note:**
+    - 初期版はJPYのみactive
+  }
+}
+
+' =====================================
+' 共通型定義
+' =====================================
+
+package "Types" <<共通型>> {
+
+  class User {
+    + id: number
+    + email: string
+    + name: string
+    + createdAt: string
+    + updatedAt: string
+  }
+
+  class Category {
+    + id: number
+    + name: string
+    + type: TransactionType
+    + isDefault: boolean
+  }
+
+  class UserCategory {
+    + id: number
+    + name: string
+    + type: TransactionType
+    + isDefault: boolean
+    + isVisible: boolean
+    + customName: string | null
+    + displayOrder: number
+  }
+
+  class Transaction {
+    + id: number
+    + userId: number
+    + type: TransactionType
+    + title: string
+    + amount: number
+    + currencyCode: string
+    + date: Date
+    + categories: Category[]
+    + memo: string | null
+    + createdAt: string
+    + updatedAt: string
+  }
+
+  class MonthlySummary {
+    + year: number
+    + month: number
+    + totalIncome: number
+    + totalExpense: number
+    + balance: number
+    + categoryBreakdown: CategorySummary[]
+  }
+
+  class YearlySummary {
+    + year: number
+    + totalIncome: number
+    + totalExpense: number
+    + balance: number
+    + monthlySummaries: MonthlySummary[]
+    + averageMonthlyExpense: number
+    + highestExpenseMonth: number
+  }
+
+  class CategorySummary {
+    + categoryId: number
+    + categoryName: string
+    + amount: number
+    + percentage: number
+    + count: number
+  }
+
+  class Currency {
+    + code: string
+    + name: string
+    + symbol: string
+    + isActive: boolean
+  }
+
+  enum TransactionType {
+    INCOME
+    EXPENSE
+  }
+
+  class Pagination {
+    + total: number
+    + page: number
+    + limit: number
+    + totalPages: number
+    + hasNext: boolean
+    + hasPrev: boolean
+  }
+}
+
+' =====================================
+' ミドルウェア・認証
+' =====================================
+
+note as AuthNote
+  **【認証ミドルウェア】**
+
+  **requireAuth:**
+  - すべての認証が必要なエンドポイントに適用
+  - JWTトークンの検証
+  - ユーザー情報をcontextに注入
+
+  **protectedProcedure:**
+  - requireAuthミドルウェアを適用したprocedure
+  - ctx.user が保証される
+
+  **publicProcedure:**
+  - 認証不要なエンドポイント
+  - auth.register, auth.login など
+end note
+
+' =====================================
+' エラーハンドリング
+' =====================================
+
+note as ErrorNote
+  **【エラーコード一覧】**
+
+  **認証エラー (4xx):**
+  - UNAUTHORIZED: 認証が必要
+  - INVALID_CREDENTIALS: 認証情報が不正
+  - EMAIL_ALREADY_EXISTS: メールアドレス重複
+  - WEAK_PASSWORD: パスワードが弱い
+
+  **権限エラー (4xx):**
+  - NOT_OWNER: リソースの所有者ではない
+  - FORBIDDEN: アクセス権限なし
+
+  **バリデーションエラー (4xx):**
+  - INVALID_INPUT: 入力値が不正
+  - INVALID_EMAIL_FORMAT: メール形式が不正
+  - INVALID_AMOUNT: 金額が不正
+  - FUTURE_DATE_NOT_ALLOWED: 未来日は不可
+
+  **リソースエラー (4xx):**
+  - USER_NOT_FOUND: ユーザーが見つからない
+  - CATEGORY_NOT_FOUND: カテゴリが見つからない
+  - TRANSACTION_NOT_FOUND: 取引が見つからない
+
+  **サーバーエラー (5xx):**
+  - INTERNAL_SERVER_ERROR: サーバー内部エラー
+  - DATABASE_ERROR: データベースエラー
+end note
+
+' =====================================
+' バリデーション
+' =====================================
+
+note as ValidationNote
+  **【入力バリデーション (Zod)】**
+
+  **共通ルール:**
+  - すべての入力はZodスキーマで検証
+  - 型安全性を保証
+
+  **主要なバリデーション:**
+  - email: emailフォーマット、最大255文字
+  - password: 最小8文字、英数字記号含む
+  - name: 最小1文字、最大100文字
+  - title: 最小1文字、最大100文字
+  - amount: 正の整数のみ
+  - date: YYYY-MM-DD形式、未来日不可
+  - memo: 最大500文字（TEXT型）
+end note
+
+@enduml
