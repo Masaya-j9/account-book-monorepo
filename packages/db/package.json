@@ -1,9 +1,15 @@
 {
-  "name": "db",
+  "name": "@account-book-app/db",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Database schema and ORM setup using Drizzle",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:push": "drizzle-kit push",
+    "db:seed": "tsx src/seed/index.ts",
     "test": "echo \"No tests for db package\""
   },
   "keywords": [],
@@ -11,11 +17,12 @@
   "license": "ISC",
   "dependencies": {
     "dotenv": "^17.2.3",
-    "drizzle-orm": "^0.44.6",
+    "drizzle-orm": "^0.30.10",
     "pg": "^8.16.3"
   },
   "devDependencies": {
     "@types/node": "^24.7.2",
+    "drizzle-kit": "^0.21.4",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   }
