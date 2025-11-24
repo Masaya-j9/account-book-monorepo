@@ -1,0 +1,188 @@
+@startuml 家計簿アプリ - テーブル定義
+
+' スタイル設定
+skinparam linetype ortho
+skinparam class {
+  BackgroundColor WhiteSmoke
+  BorderColor Black
+  ArrowColor Black
+}
+
+' =====================================
+' ユーザー管理
+' =====================================
+
+entity "users" {
+  * id: INTEGER <<PK, AUTO_INCREMENT>>
+  --
+  * email: VARCHAR(255) <<UNIQUE>>
+  * password_hash: VARCHAR(255)
+  * name: VARCHAR(100)
+  * created_at: TIMESTAMP
+  * updated_at: TIMESTAMP
+  deleted_at: TIMESTAMP
+}
+
+' =====================================
+' 通貨マスター
+' =====================================
+
+entity "currencies" {
+  * code: VARCHAR(3) <<PK>>
+  --
+  * name: VARCHAR(50) (UNIQUE)
+  * symbol: VARCHAR(10)
+  * is_active: BOOLEAN
+  * created_at: TIMESTAMP
+  * updated_at: TIMESTAMP
+  deleted_at: TIMESTAMP
+}
+
+' =====================================
+' カテゴリ管理
+' =====================================
+
+entity "categories" {
+  * id: INTEGER <<PK, AUTO_INCREMENT>>
+  --
+  * name: VARCHAR(50) <<UNIQUE>>
+  * type: VARCHAR(10)
+  * is_default: BOOLEAN
+  * created_at: TIMESTAMP
+  * updated_at: TIMESTAMP
+  --
+  CHECK (type IN ('INCOME', 'EXPENSE'))
+}
+
+' =====================================
+' ユーザーカテゴリ設定（中間テーブル）
+' =====================================
+
+entity "user_categories" {
+  * user_id: INTEGER <<PK, FK>>
+  * category_id: INTEGER <<PK, FK>>
+  --
+  * is_visible: BOOLEAN
+  custom_name: VARCHAR(50)
+  display_order: INTEGER
+  * created_at: TIMESTAMP
+  * updated_at: TIMESTAMP
+  deleted_at: TIMESTAMP
+}
+
+' =====================================
+' 収支管理
+' =====================================
+
+entity "transactions" {
+  * id: INTEGER <<PK, AUTO_INCREMENT>>
+  --
+  * user_id: INTEGER <<FK>>
+  * type: VARCHAR(10)
+  * title: VARCHAR(100)
+  * amount: INTEGER
+  * currency_code: VARCHAR(3) <<FK>>
+  * date: DATE
+  * category_id: INTEGER <<FK>>
+  memo: TEXT
+  * created_at: TIMESTAMP
+  * updated_at: TIMESTAMP
+  deleted_at: TIMESTAMP
+  --
+  CHECK (type IN ('INCOME', 'EXPENSE'))
+  CHECK (amount > 0)
+}
+
+' =====================================
+' インデックス定義
+' =====================================
+
+note right of currencies
+  **【マスターデータ】**
+  - code: ISO 4217通貨コード
+  - is_active: 利用可能な通貨かどうか
+
+  **【初期データ】**
+  - JPY (日本円, ¥, active)
+  - USD (米ドル, $, inactive)
+  - EUR (ユーロ, €, inactive)
+
+  **【拡張性】**
+  - 将来的に多通貨対応する際に使用
+  - 初期版ではJPYのみactive
+end note
+
+note right of users
+  **【インデックス】**
+  - email (UNIQUE)
+  - deleted_at
+
+  **【制約】**
+  - email形式のバリデーション
+  - passwordはbcryptでハッシュ化
+
+  **【論理削除】**
+  - deleted_at = NULL: 有効なユーザー
+  - deleted_at = 値: 退会済みユーザー
+  - 退会後もデータは保持される
+end note
+
+note right of categories
+  **【インデックス】**
+  - name (UNIQUE)
+  - type
+
+  **【ビジネスルール】**
+  - 全ユーザー共通のマスターデータ
+  - is_default = true: システム標準カテゴリ（削除不可）
+  - is_default = false: 管理者が追加したカテゴリ
+
+  **【初期データ】**
+  支出: 食費、交通費、日用品、娯楽、その他
+  収入: 給与、副業、その他
+end note
+
+note right of user_categories
+  **【インデックス】**
+  - (user_id, category_id) PK
+  - user_id
+  - category_id
+  - (user_id, display_order)
+
+  **【ビジネスルール】**
+  - is_visible: カテゴリの表示/非表示
+  - custom_name: ユーザー独自の表示名（NULL=デフォルト名）
+  - display_order: 表示順序
+
+  **【初期データ】**
+  - ユーザー登録時に全カテゴリをis_visible=trueで作成
+  - display_orderはカテゴリIDの昇順
+end note
+
+note right of transactions
+  **【インデックス】**
+  - user_id
+  - category_id
+  - currency_code
+  - (user_id, date)
+  - date
+  - deleted_at
+
+  **【ビジネスルール】**
+  - タイトルは必須（最大100文字）
+  - 未来日は許可しない（アプリ層で検証）
+  - amount は整数のみ（小数点以下なし）
+
+  **【論理削除】**
+  - deleted_at = NULL: 有効な取引
+  - deleted_at = 値: 削除済み取引
+  - 削除後も履歴として保持される
+  - 集計時はdeleted_at IS NULLで除外
+
+  **【パフォーマンス】**
+  - 月次集計のため (user_id, date) にインデックス
+  - 日付範囲検索のため date にインデックス
+  - カテゴリ別集計のため category_id にインデックス
+end note
+
+@enduml

@@ -1,0 +1,124 @@
+@startuml 家計簿アプリ - リレーション図
+
+' スタイル設定
+skinparam linetype ortho
+skinparam class {
+  BackgroundColor WhiteSmoke
+  BorderColor Black
+  ArrowColor Black
+}
+
+' =====================================
+' テーブル定義の参照
+' =====================================
+
+!include tables.pu
+
+' =====================================
+' リレーションシップ
+' =====================================
+
+' 1. ユーザー関連
+users ||--o{ transactions
+users ||--o{ user_categories
+
+' 2. カテゴリ関連
+categories ||--o{ user_categories
+categories ||--o{ transactions
+
+' 3. 通貨関連
+currencies ||--o{ transactions
+
+' =====================================
+' 外部キー制約
+' =====================================
+
+note as ForeignKeyNote
+  **【外部キー制約一覧】**
+
+  **transactions テーブル**
+  ┌─────────────────────────────────────────────┐
+  │ user_id → users.id                          │
+  │   ON DELETE: CASCADE                        │
+  │   ON UPDATE: CASCADE                        │
+  │   理由: ユーザー削除時に収支も削除          │
+  ├─────────────────────────────────────────────┤
+  │ category_id → categories.id                 │
+  │   ON DELETE: RESTRICT                       │
+  │   ON UPDATE: CASCADE                        │
+  │   理由: 使用中カテゴリは削除不可            │
+  ├─────────────────────────────────────────────┤
+  │ currency_code → currencies.code             │
+  │   ON DELETE: RESTRICT                       │
+  │   ON UPDATE: CASCADE                        │
+  │   理由: 使用中通貨は削除不可                │
+  └─────────────────────────────────────────────┘
+
+  **user_categories テーブル**
+  ┌─────────────────────────────────────────────┐
+  │ user_id → users.id                          │
+  │   ON DELETE: CASCADE                        │
+  │   ON UPDATE: CASCADE                        │
+  │   理由: ユーザー削除時に設定も削除          │
+  ├─────────────────────────────────────────────┤
+  │ category_id → categories.id                 │
+  │   ON DELETE: RESTRICT                       │
+  │   ON UPDATE: CASCADE                        │
+  │   理由: 設定中カテゴリは削除不可            │
+  └─────────────────────────────────────────────┘
+end note
+
+' =====================================
+' データ整合性の考慮事項
+' =====================================
+
+note as DataIntegrityNote
+  **【データ整合性】**
+
+  **カテゴリ削除時の考慮事項:**
+  1. デフォルトカテゴリ (is_default=true) は削除不可
+  2. 使用中のカテゴリは削除不可
+  3. 削除前にtransactionsとuser_categoriesへの参照確認が必要
+
+  **ユーザー削除時の動作:**
+  1. 関連するtransactionsを全て削除
+  2. 関連するuser_categoriesを全て削除
+  3. categoriesマスターは削除されない
+
+  **ユーザー登録時の初期化:**
+  - 全categoriesをuser_categoriesにコピー
+  - is_visible=true, display_order=カテゴリID順
+
+  **トランザクション境界:**
+  - ユーザー削除は1つのトランザクション内で実行
+  - 関連データの削除が失敗した場合はロールバック
+end note
+
+' =====================================
+' Value Objectのマッピング
+' =====================================
+
+note as ValueObjectNote
+  **【Value Objectの永続化】**
+
+  **Money Value Object:**
+  - amount (INTEGER): 金額（整数のみ）
+  - currency (VARCHAR(3)): 通貨コード（JPY固定）
+
+  **Date Value Object:**
+  - date (DATE): 日付
+  - DB側ではDATE型で保存
+  - アプリ層でDate Value Objectに変換
+
+  **設計判断:**
+  - タイムゾーンの問題を回避（時刻情報なし）
+  - 月次集計は DATE_TRUNC や EXTRACT 関数を使用
+  - 日付範囲検索が効率的
+
+  **Summary Value Object:**
+  - テーブルとして永続化しない
+  - transactionsから動的に集計
+  - キャッシュ層で対応を検討
+end note
+
+@enduml
