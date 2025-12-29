@@ -9,7 +9,7 @@ import { transactionTypeSchema } from './commonSchema';
 export const categoriesCreateInputSchema = z.object({
   name: z
     .string()
-    .min(1, 'カテゴリ名は1文字以上である必要があります')
+    .min(1, 'カテゴリ名は必須です')
     .max(50, 'カテゴリ名は50文字以内である必要があります'),
   typeId: z.number().int().positive(),
 });
@@ -39,7 +39,7 @@ export const categoriesUpdateInputSchema = z.object({
   isVisible: z.boolean(),
   customName: z
     .string()
-    .min(1, 'カスタム名は1文字以上である必要があります')
+    .min(1, 'カスタム名は必須です')
     .max(50, 'カスタム名は50文字以内である必要があります')
     .optional(),
   displayOrder: z.number().int().nonnegative().optional(),
