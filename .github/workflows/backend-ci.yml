@@ -65,4 +65,4 @@ jobs:
         run: npm run test:run --workspace=apps/backend
 
       - name: Build
-        run: npm run build --workspace=apps/backend
+        run: npm run build:backend
