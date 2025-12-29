@@ -63,6 +63,25 @@ package "auth" <<Router>> {
 
 package "categories" <<Router>> {
 
+  class "categories.create" <<Mutation>> {
+    **Input:**
+    + name: string
+    + type: TransactionType
+    --
+    **Output:**
+    + category: Category
+    --
+    **Errors:**
+    - UNAUTHORIZED
+    - CATEGORY_NAME_REQUIRED
+    - CATEGORY_NAME_TOO_LONG
+    --
+    **Note:**
+    - カスタムカテゴリを作成
+    - isDefault: false
+    - 作成後、user_categoriesに自動登録
+  }
+
   class "categories.list" <<Query>> {
     **Input:**
     + type?: TransactionType

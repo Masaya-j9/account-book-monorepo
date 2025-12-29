@@ -1,32 +1,53 @@
 {
-  "name": "account-book-app",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "packageManager": "npm@10.9.3",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
-  "scripts": {
-    "dev": "turbo run dev --parallel",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
-    "format": "turbo run format",
-    "test": "turbo run test",
-    "test:ui": "turbo run test:ui",
-    "test:run": "turbo run test:run"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@types/node": "^24.7.2",
-    "tsx": "^4.20.6",
-    "turbo": "^2.5.8",
-    "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "zod": "^4.1.12"
-  }
+	"name": "account-book-app",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"packageManager": "npm@10.9.3",
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"scripts": {
+		"dev": "turbo run dev --parallel",
+		"dev:backend": "turbo run dev --filter=backend",
+		"build": "turbo run build",
+		"build:backend": "turbo run build --filter=backend",
+		"start:backend": "turbo run build --filter=backend && npm -w apps/backend run start",
+		"lint": "turbo run lint",
+		"lint:backend": "turbo run lint --filter=backend",
+		"format": "turbo run format",
+		"format:backend": "turbo run format --filter=backend",
+		"test": "turbo run test",
+		"test:backend": "turbo run test --filter=backend --",
+		"test:ui": "turbo run test:ui",
+		"test:ui:backend": "turbo run test:ui --filter=backend",
+		"test:run": "turbo run test:run",
+		"test:run:backend": "turbo run test:run --filter=backend --",
+		"prepare": "husky"
+	},
+	"lint-staged": {
+		"apps/backend/**/*.{ts,js,json}": [
+			"biome check --write --no-errors-on-unmatched"
+		],
+		"packages/**/*.{ts,js,json}": [
+			"biome check --write --no-errors-on-unmatched"
+		]
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"devDependencies": {
+		"@types/node": "^24.7.2",
+		"husky": "^9.1.7",
+		"lint-staged": "^16.2.7",
+		"vitest": "^2.1.8",
+		"tsx": "^4.20.6",
+		"tsup": "^8.5.0",
+		"turbo": "^2.5.8",
+		"typescript": "^5.9.3"
+	},
+	"dependencies": {
+		"zod": "^4.1.12"
+	}
 }

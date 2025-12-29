@@ -2,19 +2,17 @@
   "compilerOptions": {
     "composite": true,
     "target": "ESNext",
-    "module": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "strict": true,
     "verbatimModuleSyntax": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "skipLibCheck": true,
-    "ignoreDeprecations": "5.0",
     "types": ["node"],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
-    "outDir": "./dist",
-    "paths": {
-      "@account-book-app/shared": ["../../packages/shared/src"],
-      "@account-book-app/shared/*": ["../../packages/shared/src/*"]
-    }
+    "outDir": "./dist"
   },
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }
