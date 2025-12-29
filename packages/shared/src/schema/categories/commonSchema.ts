@@ -16,7 +16,7 @@ export type TransactionType = z.infer<typeof transactionTypeSchema>;
 
 export const categorySchema = z.object({
   id: z.number().int().positive(),
-  name: z.string().min(1).max(100),
+  name: z.string().min(1).max(50),
   type: transactionTypeSchema,
   isDefault: z.boolean(),
 });
@@ -29,7 +29,7 @@ export type Category = z.infer<typeof categorySchema>;
 
 export const userCategorySchema = categorySchema.extend({
   isVisible: z.boolean(),
-  customName: z.string().max(100).nullable(),
+  customName: z.string().max(50).nullable(),
   displayOrder: z.number().int().nonnegative(),
 });
 

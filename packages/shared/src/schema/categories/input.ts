@@ -10,7 +10,7 @@ export const categoriesCreateInputSchema = z.object({
   name: z
     .string()
     .min(1, 'カテゴリ名は1文字以上である必要があります')
-    .max(100, 'カテゴリ名は100文字以内である必要があります'),
+    .max(50, 'カテゴリ名は50文字以内である必要があります'),
   typeId: z.number().int().positive(),
 });
 
@@ -40,7 +40,7 @@ export const categoriesUpdateInputSchema = z.object({
   customName: z
     .string()
     .min(1, 'カスタム名は1文字以上である必要があります')
-    .max(100, 'カスタム名は100文字以内である必要があります')
+    .max(50, 'カスタム名は50文字以内である必要があります')
     .optional(),
   displayOrder: z.number().int().nonnegative().optional(),
 });
