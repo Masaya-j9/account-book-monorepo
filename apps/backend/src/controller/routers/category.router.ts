@@ -23,61 +23,36 @@ const resolveCreateCategoryUseCase = (db: NodePgDatabase) => {
   return container.get<CreateCategoryUseCase>(TOKENS.CreateCategoryUseCase);
 };
 
-const toCreateCategoryTrpcError = (error: unknown) => {
-  if (error instanceof Error) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('[categories.create] error:', error);
-    }
+const toCreateCategoryTrpcError = <T>(cause: T) => {
+  const error = cause instanceof Error ? cause : new Error(String(cause));
 
-    if (error instanceof TransactionTypeNotFoundError) {
-      return new TRPCError({
-        code: 'BAD_REQUEST',
-        message:
-          '取引種別(INCOME/EXPENSE)がDBに未登録です。packages/db の seed を実行してください。',
-      });
-    }
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('[categories.create] error:', error);
+  }
 
-    if (error instanceof DuplicateCategoryError) {
-      return new TRPCError({
-        code: 'CONFLICT',
-        message: error.message,
-      });
-    }
+  if (error instanceof TransactionTypeNotFoundError) {
+    return new TRPCError({
+      code: 'BAD_REQUEST',
+      message:
+        '取引種別(INCOME/EXPENSE)がDBに未登録です。packages/db の seed を実行してください。',
+    });
+  }
 
-    if (
-      error instanceof InvalidCategoryNameError ||
-      error instanceof InvalidTypeIdError
-    ) {
-      return new TRPCError({
-        code: 'BAD_REQUEST',
-        message: error.message,
-      });
-    }
+  if (error instanceof DuplicateCategoryError) {
+    return new TRPCError({
+      code: 'CONFLICT',
+      message: error.message,
+    });
+  }
 
-    if (
-      error.message.includes('Transaction type') &&
-      error.message.includes('not found')
-    ) {
-      return new TRPCError({
-        code: 'BAD_REQUEST',
-        message:
-          '取引種別(INCOME/EXPENSE)がDBに未登録です。packages/db の seed を実行してください。',
-      });
-    }
-
-    if (error.message.includes('既に存在')) {
-      return new TRPCError({
-        code: 'CONFLICT',
-        message: error.message,
-      });
-    }
-
-    if (error.message.includes('必須') || error.message.includes('以内')) {
-      return new TRPCError({
-        code: 'BAD_REQUEST',
-        message: error.message,
-      });
-    }
+  if (
+    error instanceof InvalidCategoryNameError ||
+    error instanceof InvalidTypeIdError
+  ) {
+    return new TRPCError({
+      code: 'BAD_REQUEST',
+      message: error.message,
+    });
   }
 
   return new TRPCError({
