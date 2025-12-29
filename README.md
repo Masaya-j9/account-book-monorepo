@@ -8,7 +8,7 @@
 
 ```
 account-book-app/
-├── app/
+├── apps/
 │   ├── frontend/          # Next.jsフロントエンドアプリケーション
 │   └── backend/           # Honoバックエンドアプリケーション
 ├── packages/
@@ -27,7 +27,7 @@ account-book-app/
 
 - **Node.js** - サーバーサイド JavaScript 実行環境
 
-### フロントエンド (`app/frontend`)
+### フロントエンド (`apps/frontend`)
 
 - **Next.js 15** - React フレームワーク
 - **Turbopack** - 高速バンドラー
@@ -36,9 +36,10 @@ account-book-app/
 - **Vitest** - 高速ユニットテストフレームワーク
 - **Testing Library** - React コンポーネントテスト
 
-### バックエンド (`app/backend`)
+### バックエンド (`apps/backend`)
 
 - **Hono** - 高速軽量な Web フレームワーク
+- **Effect-TS (`effect`)** - Effect システム（副作用・非同期・エラーを型で扱う）
 - **tsx** - TypeScript 実行環境（開発用）
 - **Vitest** - 高速ユニットテストフレームワーク
 
@@ -67,6 +68,8 @@ npm install
 ```
 
 このコマンドにより、ルートと全てのワークスペース（`app/frontend`, `app/backend`, `packages/shared`, `packages/db`）の依存関係が一括でインストールされます。
+
+このプロジェクトでは Turborepo をローカル依存（devDependencies）として利用しているため、まず `npm install` を実行して `turbo` を使える状態にしてください。
 
 ### データベースのセットアップ
 
@@ -117,13 +120,13 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/account_book_app"
 
 ```shell
 # マイグレーションファイルの生成
-npm run db:generate --filter=db
+npm -w @account-book-app/db run db:generate
 
 # マイグレーションの適用
-npm run db:migrate --filter=db
+npm -w @account-book-app/db run db:migrate
 
 # Drizzle Studio の起動（GUI でデータベースを確認）
-npm run db:studio --filter=db
+npm -w @account-book-app/db run db:studio
 ```
 
 ### サーバーの起動
@@ -135,8 +138,11 @@ npm run dev
 # フロントエンドのみ起動
 npm run dev --filter=frontend
 
-# バックエンドのみ起動
-npm run dev --filter=backend
+# バックエンドのみ起動（推奨）
+npm run dev:backend
+
+# turbo の filter を直接使う場合
+npx turbo run dev --filter=backend
 ```
 
 起動後のアクセス先：
@@ -144,16 +150,38 @@ npm run dev --filter=backend
 - **フロントエンド**: http://localhost:3000
 - **バックエンド**: http://localhost:4000
 
+バックエンドの簡易動作確認（ヘルスチェック）：
+
+```shell
+curl -sS http://localhost:4000/
+```
+
 ### ビルド
 
 ```shell
 # すべてのアプリケーションをビルド
 npm run build
 
+# turbo コマンドが見つからない場合（PATHに無い場合）は npx 経由でも実行できます
+npx turbo run build
+
 # 特定のアプリケーションのみビルド
 npm run build --filter=frontend
-npm run build --filter=backend
+
+# バックエンドのみビルド（推奨）
+npm run build:backend
 ```
+
+バックエンドのみを「ビルド→起動」する場合：
+
+```shell
+npm run start:backend
+```
+
+ビルドの考え方：
+
+- `packages/db` と `packages/shared` は `tsup` で `dist/` を生成し、アプリ側は package の `exports`（`dist`）を参照します
+- `apps/backend` は `tsup` で `dist/` を生成した上で `tsc --noEmit` で型チェックします
 
 ## コード品質管理
 
@@ -169,7 +197,7 @@ npm run lint
 npm run lint --filter=frontend
 
 # バックエンドのみリント
-npm run lint --filter=backend
+npm run lint:backend
 ```
 
 ### フォーマット（Format）
@@ -184,7 +212,7 @@ npm run format
 npm run format --filter=frontend
 
 # バックエンドのみフォーマット
-npm run format --filter=backend
+npm run format:backend
 ```
 
 ### テスト（Test）
@@ -255,18 +283,8 @@ import { スキーマ名 } from "@account-book-app/shared";
 
 ### TypeScript 設定
 
-各アプリケーションの`tsconfig.json`で以下のパスマッピングが設定されています：
-
-```json
-{
-  "compilerOptions": {
-    "paths": {
-      "@account-book-app/shared": ["../../packages/shared/src"],
-      "@account-book-app/shared/*": ["../../packages/shared/src/*"]
-    }
-  }
-}
-```
+アプリ（`apps/*`）からは `@account-book-app/shared` を通常のパッケージとして import します。
+モノレポ内のパッケージは `exports` で `dist` を公開しているため、アプリ側の TypeScript で `packages/*/src` を直接参照しない運用にしています（`rootDir` 逸脱やファイルリスト不整合を避けるため）。
 
 ## データベースパッケージの使用方法
 
@@ -282,18 +300,8 @@ import { users, transactions } from "@account-book-app/db/schema";
 
 ### TypeScript 設定
 
-バックエンドの`tsconfig.json`で以下のパスマッピングを設定：
-
-```json
-{
-  "compilerOptions": {
-    "paths": {
-      "@account-book-app/db": ["../../packages/db/src"],
-      "@account-book-app/db/*": ["../../packages/db/src/*"]
-    }
-  }
-}
-```
+バックエンドからは `@account-book-app/db` を通常のパッケージとして import します。
+スキーマなどの import は `@account-book-app/db` が公開しているエントリポイント経由で行います。
 
 ### Drizzle ORM の基本的な使用例
 
