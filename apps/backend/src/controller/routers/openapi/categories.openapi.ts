@@ -27,7 +27,7 @@ const errorResponseSchema = z.object({
 
 const createCategoryRoute = createRoute({
   method: 'post',
-  path: '/api/categories',
+  path: '/categories',
   request: {
     body: {
       required: true,
