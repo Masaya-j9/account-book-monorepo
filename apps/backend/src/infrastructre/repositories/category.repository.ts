@@ -2,9 +2,14 @@
 // Drizzle ORMを使用したデータアクセス層
 
 import {
+  and,
+  asc,
   categories,
+  count,
+  desc,
   eq,
   type NodePgDatabase,
+  sql,
   transactionTypes,
   userCategories,
 } from '@account-book-app/db';
@@ -12,9 +17,17 @@ import { inject, injectable } from 'inversify';
 import type {
   CategoryRecord,
   CreateCategoryData,
+  UserCategoryRecord,
 } from '../../domain/entities/category.entity';
-import type { ICategoryRepository } from '../../domain/repositories/category.repository.interface';
+import type {
+  FindAllOptions,
+  ICategoryRepository,
+  PaginatedResult,
+} from '../../domain/repositories/category.repository.interface';
 import { TOKENS } from '../di/tokens';
+
+// displayOrderが未設定の場合のデフォルト値
+const DEFAULT_DISPLAY_ORDER = 0;
 
 @injectable()
 export class CategoryRepository implements ICategoryRepository {
@@ -116,6 +129,110 @@ export class CategoryRepository implements ICategoryRepository {
     );
   }
 
+  async findAllWithPagination(
+    options: FindAllOptions,
+  ): Promise<PaginatedResult<UserCategoryRecord>> {
+    const {
+      userId,
+      page,
+      perPage,
+      sortBy = 'displayOrder',
+      sortOrder = 'asc',
+      type,
+      includeHidden = false,
+    } = options;
+
+    // フィルタ条件の構築
+    const conditions = [eq(userCategories.userId, userId)];
+
+    if (type) {
+      conditions.push(eq(transactionTypes.code, type));
+    }
+
+    if (!includeHidden) {
+      conditions.push(eq(userCategories.isVisible, true));
+    }
+
+    const whereClause = and(...conditions);
+
+    // ソート順の決定
+    const sortColumn = {
+      name: categories.name,
+      createdAt: categories.createdAt,
+      displayOrder: userCategories.displayOrder,
+    }[sortBy];
+
+    const orderClause =
+      sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
+
+    // 総数取得
+    const [totalResult] = await this.db
+      .select({ count: count() })
+      .from(userCategories)
+      .innerJoin(categories, eq(userCategories.categoryId, categories.id))
+      .innerJoin(transactionTypes, eq(categories.typeId, transactionTypes.id))
+      .where(whereClause);
+
+    const total = totalResult?.count ?? 0;
+    const totalPages = Math.ceil(total / perPage);
+
+    // データ取得
+    const offset = (page - 1) * perPage;
+    const results = await this.db
+      .select({
+        category: categories,
+        transactionType: transactionTypes,
+        userCategory: userCategories,
+      })
+      .from(userCategories)
+      .innerJoin(categories, eq(userCategories.categoryId, categories.id))
+      .innerJoin(transactionTypes, eq(categories.typeId, transactionTypes.id))
+      .where(whereClause)
+      .orderBy(orderClause)
+      .limit(perPage)
+      .offset(offset);
+
+    const items = results.map(({ category, transactionType, userCategory }) =>
+      this.toUserCategoryEntity(category, transactionType.code, userCategory),
+    );
+
+    return {
+      items,
+      total,
+      page,
+      perPage,
+      totalPages,
+    };
+  }
+
+  async findByIdWithUser(
+    id: number,
+    userId: number,
+  ): Promise<UserCategoryRecord | null> {
+    const results = await this.db
+      .select({
+        category: categories,
+        transactionType: transactionTypes,
+        userCategory: userCategories,
+      })
+      .from(userCategories)
+      .innerJoin(categories, eq(userCategories.categoryId, categories.id))
+      .innerJoin(transactionTypes, eq(categories.typeId, transactionTypes.id))
+      .where(and(eq(categories.id, id), eq(userCategories.userId, userId)))
+      .limit(1);
+
+    if (results.length === 0) {
+      return null;
+    }
+
+    const { category, transactionType, userCategory } = results[0];
+    return this.toUserCategoryEntity(
+      category,
+      transactionType.code,
+      userCategory,
+    );
+  }
+
   private toDomainEntity(
     dbCategory: typeof categories.$inferSelect,
     typeCode: string,
@@ -127,6 +244,24 @@ export class CategoryRepository implements ICategoryRepository {
       isDefault: dbCategory.isDefault,
       createdAt: dbCategory.createdAt,
       updatedAt: dbCategory.updatedAt,
+    };
+  }
+
+  private toUserCategoryEntity(
+    dbCategory: typeof categories.$inferSelect,
+    typeCode: string,
+    dbUserCategory: typeof userCategories.$inferSelect,
+  ): UserCategoryRecord {
+    return {
+      id: dbCategory.id,
+      name: dbCategory.name,
+      type: typeCode as 'INCOME' | 'EXPENSE',
+      isDefault: dbCategory.isDefault,
+      createdAt: dbCategory.createdAt,
+      updatedAt: dbCategory.updatedAt,
+      isVisible: dbUserCategory.isVisible,
+      customName: dbUserCategory.customName,
+      displayOrder: dbUserCategory.displayOrder ?? DEFAULT_DISPLAY_ORDER,
     };
   }
 }

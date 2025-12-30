@@ -4,7 +4,26 @@
 import type {
   CategoryRecord,
   CreateCategoryData,
+  UserCategoryRecord,
 } from '../entities/category.entity';
+
+export type FindAllOptions = {
+  userId: number;
+  page: number;
+  perPage: number;
+  sortBy?: 'name' | 'createdAt' | 'displayOrder';
+  sortOrder?: 'asc' | 'desc';
+  type?: 'INCOME' | 'EXPENSE';
+  includeHidden?: boolean;
+};
+
+export type PaginatedResult<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
+};
 
 export interface ICategoryRepository {
   /**
@@ -26,4 +45,19 @@ export interface ICategoryRepository {
    * ユーザーのカテゴリ一覧を取得する
    */
   findByUserId(userId: number): Promise<CategoryRecord[]>;
+
+  /**
+   * ページネーション付きでカテゴリ一覧を取得する
+   */
+  findAllWithPagination(
+    options: FindAllOptions,
+  ): Promise<PaginatedResult<UserCategoryRecord>>;
+
+  /**
+   * IDでカテゴリを取得する（ユーザーカテゴリ情報付き）
+   */
+  findByIdWithUser(
+    id: number,
+    userId: number,
+  ): Promise<UserCategoryRecord | null>;
 }
