@@ -43,7 +43,7 @@
 - `InvalidCategoryIdError`: カテゴリID不正
 
 #### 3. Infrastructure Layer（インフラストラクチャ層）
-**場所**: `apps/backend/src/infrastructre/repositories/`
+**場所**: `apps/backend/src/infrastructure/repositories/`
 
 **実装内容**:
 - `CategoryRepository`: Drizzle ORMを使用したリポジトリ実装

@@ -26,6 +26,9 @@ import type {
 } from '../../domain/repositories/category.repository.interface';
 import { TOKENS } from '../di/tokens';
 
+// displayOrderが未設定の場合のデフォルト値
+const DEFAULT_DISPLAY_ORDER = 0;
+
 @injectable()
 export class CategoryRepository implements ICategoryRepository {
   @inject(TOKENS.Db)
@@ -258,7 +261,7 @@ export class CategoryRepository implements ICategoryRepository {
       updatedAt: dbCategory.updatedAt,
       isVisible: dbUserCategory.isVisible,
       customName: dbUserCategory.customName,
-      displayOrder: dbUserCategory.displayOrder ?? 0,
+      displayOrder: dbUserCategory.displayOrder ?? DEFAULT_DISPLAY_ORDER,
     };
   }
 }
