@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { pageInfoSchema } from '../common/pagination';
 import { categorySchema, userCategorySchema } from './commonSchema';
 
 // =====================================
@@ -16,14 +17,16 @@ export type CategoriesCreateOutput = z.infer<
 
 // categories.list Output
 export const categoriesListOutputSchema = z.object({
-  categories: z.array(userCategorySchema),
+  items: z.array(userCategorySchema),
+  pageInfo: pageInfoSchema,
+  total: z.number().int().min(0),
 });
 
 export type CategoriesListOutput = z.infer<typeof categoriesListOutputSchema>;
 
 // categories.getById Output
 export const categoriesGetByIdOutputSchema = z.object({
-  category: userCategorySchema,
+  item: userCategorySchema,
 });
 
 export type CategoriesGetByIdOutput = z.infer<

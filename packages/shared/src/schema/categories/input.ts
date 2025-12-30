@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { paginationInputSchema, sortOrderSchema } from '../common/pagination';
 import { transactionTypeSchema } from './commonSchema';
 
 // =====================================
@@ -17,10 +18,14 @@ export const categoriesCreateInputSchema = z.object({
 export type CategoriesCreateInput = z.infer<typeof categoriesCreateInputSchema>;
 
 // categories.list
-export const categoriesListInputSchema = z.object({
-  type: transactionTypeSchema.optional(),
-  includeHidden: z.boolean().optional().default(false),
-});
+export const categoriesListInputSchema = z
+  .object({
+    type: transactionTypeSchema.optional(),
+    includeHidden: z.boolean().optional().default(false),
+    sortBy: z.enum(['name', 'createdAt', 'displayOrder']).optional().default('displayOrder'),
+    sortOrder: sortOrderSchema.optional().default('asc'),
+  })
+  .merge(paginationInputSchema);
 
 export type CategoriesListInput = z.infer<typeof categoriesListInputSchema>;
 

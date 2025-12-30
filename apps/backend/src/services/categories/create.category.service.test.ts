@@ -35,6 +35,14 @@ describe('CreateCategoryUseCase（カテゴリ作成）', () => {
       findById: vi.fn(async (_id: number) => null),
       findByName: vi.fn(async (_name: string) => null),
       findByUserId: vi.fn(async (_userId: number) => []),
+      findAllWithPagination: vi.fn(async () => ({
+        items: [],
+        total: 0,
+        page: 1,
+        perPage: 30,
+        totalPages: 0,
+      })),
+      findByIdWithUser: vi.fn(async (_id: number, _userId: number) => null),
       ...overrides,
     };
 

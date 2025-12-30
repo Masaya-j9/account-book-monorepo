@@ -183,6 +183,12 @@ export type CategoryRecord = {
   updatedAt: Date;
 };
 
+export type UserCategoryRecord = CategoryRecord & {
+  isVisible: boolean;
+  customName: string | null;
+  displayOrder: number;
+};
+
 export type CreateCategoryData = {
   name: string;
   typeId: number;
