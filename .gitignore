@@ -22,6 +22,7 @@ Thumbs.db
 
 # Turbo
 .turbo/
+**/.turbo/
 
 # Logs
 *.log
