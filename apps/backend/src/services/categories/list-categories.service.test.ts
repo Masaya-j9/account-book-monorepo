@@ -9,7 +9,10 @@ import type {
 } from '../../domain/repositories/category.repository.interface';
 import { TOKENS } from '../../infrastructre/di/tokens';
 import { ListCategoriesUseCase } from './list-categories.service';
-import { InvalidPaginationError, InvalidSortParameterError } from './read-category.errors';
+import {
+  InvalidPaginationError,
+  InvalidSortParameterError,
+} from './read-category.errors';
 
 describe('ListCategoriesUseCase（カテゴリ一覧取得）', () => {
   const fixedNow = new Date('2025-01-01T00:00:00.000Z');
@@ -72,7 +75,9 @@ describe('ListCategoriesUseCase（カテゴリ一覧取得）', () => {
         makeUserCategoryRecord({ id: 2, name: '交通費', displayOrder: 2 }),
       ];
       const { useCase, repo } = setup({
-        findAllWithPagination: vi.fn(async () => makePaginatedResult(items, { total: 2 })),
+        findAllWithPagination: vi.fn(async () =>
+          makePaginatedResult(items, { total: 2 }),
+        ),
       });
 
       const result = await useCase.execute({ userId: 1 });
@@ -96,7 +101,12 @@ describe('ListCategoriesUseCase（カテゴリ一覧取得）', () => {
       const items = [makeUserCategoryRecord({ id: 3, name: '交際費' })];
       const { useCase, repo } = setup({
         findAllWithPagination: vi.fn(async () =>
-          makePaginatedResult(items, { page: 2, perPage: 10, total: 15, totalPages: 2 }),
+          makePaginatedResult(items, {
+            page: 2,
+            perPage: 10,
+            total: 15,
+            totalPages: 2,
+          }),
         ),
       });
 
@@ -147,7 +157,9 @@ describe('ListCategoriesUseCase（カテゴリ一覧取得）', () => {
     });
 
     it('タイプを指定してフィルタリングできる', async () => {
-      const items = [makeUserCategoryRecord({ id: 1, name: '給料', type: 'INCOME' })];
+      const items = [
+        makeUserCategoryRecord({ id: 1, name: '給料', type: 'INCOME' }),
+      ];
       const { useCase, repo } = setup({
         findAllWithPagination: vi.fn(async () => makePaginatedResult(items)),
       });
@@ -201,9 +213,9 @@ describe('ListCategoriesUseCase（カテゴリ一覧取得）', () => {
         useCase.execute({ userId: 1, page: 0 }),
       ).rejects.toBeInstanceOf(InvalidPaginationError);
 
-      await expect(
-        useCase.execute({ userId: 1, page: 0 }),
-      ).rejects.toThrow('ページネーションパラメータが不正です');
+      await expect(useCase.execute({ userId: 1, page: 0 })).rejects.toThrow(
+        'ページネーションパラメータが不正です',
+      );
     });
 
     it('page が整数でない場合は例外になる', async () => {
@@ -239,7 +251,9 @@ describe('ListCategoriesUseCase（カテゴリ一覧取得）', () => {
 
       await expect(
         useCase.execute({ userId: 1, sortBy: 'invalid' as any }),
-      ).rejects.toThrow('sortBy は name, createdAt, displayOrder のいずれかである必要があります');
+      ).rejects.toThrow(
+        'sortBy は name, createdAt, displayOrder のいずれかである必要があります',
+      );
     });
   });
 });

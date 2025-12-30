@@ -22,7 +22,10 @@ export const categoriesListInputSchema = z
   .object({
     type: transactionTypeSchema.optional(),
     includeHidden: z.boolean().optional().default(false),
-    sortBy: z.enum(['name', 'createdAt', 'displayOrder']).optional().default('displayOrder'),
+    sortBy: z
+      .enum(['name', 'createdAt', 'displayOrder'])
+      .optional()
+      .default('displayOrder'),
     sortOrder: sortOrderSchema.optional().default('asc'),
   })
   .merge(paginationInputSchema);

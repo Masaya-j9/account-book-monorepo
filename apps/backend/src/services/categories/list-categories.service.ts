@@ -103,10 +103,13 @@ export class ListCategoriesUseCase {
       ),
       Effect.filterOrFail(
         ({ sortBy }) =>
-          sortBy === 'name' || sortBy === 'createdAt' || sortBy === 'displayOrder',
+          sortBy === 'name' ||
+          sortBy === 'createdAt' ||
+          sortBy === 'displayOrder',
         () =>
           new InvalidSortParameterError({
-            message: 'sortBy は name, createdAt, displayOrder のいずれかである必要があります',
+            message:
+              'sortBy は name, createdAt, displayOrder のいずれかである必要があります',
           }),
       ),
     );
@@ -126,12 +129,15 @@ export class ListCategoriesUseCase {
     };
 
     return pipe(
-      Effect.promise(() => this.categoryRepository.findAllWithPagination(options)).pipe(
-        Effect.mapError((cause) =>
-          new UnexpectedListCategoriesError({
-            message: 'カテゴリ一覧の取得に失敗しました',
-            cause: this.normalizeError(cause),
-          }),
+      Effect.promise(() =>
+        this.categoryRepository.findAllWithPagination(options),
+      ).pipe(
+        Effect.mapError(
+          (cause) =>
+            new UnexpectedListCategoriesError({
+              message: 'カテゴリ一覧の取得に失敗しました',
+              cause: this.normalizeError(cause),
+            }),
         ),
       ),
       Effect.map((result) => ({

@@ -159,7 +159,8 @@ export class CategoryRepository implements ICategoryRepository {
       displayOrder: userCategories.displayOrder,
     }[sortBy];
 
-    const orderClause = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
+    const orderClause =
+      sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
 
     // 総数取得
     const [totalResult] = await this.db
@@ -214,9 +215,7 @@ export class CategoryRepository implements ICategoryRepository {
       .from(userCategories)
       .innerJoin(categories, eq(userCategories.categoryId, categories.id))
       .innerJoin(transactionTypes, eq(categories.typeId, transactionTypes.id))
-      .where(
-        and(eq(categories.id, id), eq(userCategories.userId, userId)),
-      )
+      .where(and(eq(categories.id, id), eq(userCategories.userId, userId)))
       .limit(1);
 
     if (results.length === 0) {
@@ -224,7 +223,11 @@ export class CategoryRepository implements ICategoryRepository {
     }
 
     const { category, transactionType, userCategory } = results[0];
-    return this.toUserCategoryEntity(category, transactionType.code, userCategory);
+    return this.toUserCategoryEntity(
+      category,
+      transactionType.code,
+      userCategory,
+    );
   }
 
   private toDomainEntity(

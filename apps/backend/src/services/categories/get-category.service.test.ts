@@ -5,7 +5,10 @@ import type { UserCategoryRecord } from '../../domain/entities/category.entity';
 import type { ICategoryRepository } from '../../domain/repositories/category.repository.interface';
 import { TOKENS } from '../../infrastructre/di/tokens';
 import { GetCategoryUseCase } from './get-category.service';
-import { CategoryNotFoundError, InvalidCategoryIdError } from './read-category.errors';
+import {
+  CategoryNotFoundError,
+  InvalidCategoryIdError,
+} from './read-category.errors';
 
 describe('GetCategoryUseCase（カテゴリ単体取得）', () => {
   const fixedNow = new Date('2025-01-01T00:00:00.000Z');
@@ -106,9 +109,9 @@ describe('GetCategoryUseCase（カテゴリ単体取得）', () => {
         useCase.execute({ id: 0, userId: 1 }),
       ).rejects.toBeInstanceOf(InvalidCategoryIdError);
 
-      await expect(
-        useCase.execute({ id: 0, userId: 1 }),
-      ).rejects.toThrow('カテゴリIDは1以上の整数である必要があります');
+      await expect(useCase.execute({ id: 0, userId: 1 })).rejects.toThrow(
+        'カテゴリIDは1以上の整数である必要があります',
+      );
     });
 
     it('カテゴリIDが1以上の整数でない場合は例外になる（負数）', async () => {
@@ -136,9 +139,9 @@ describe('GetCategoryUseCase（カテゴリ単体取得）', () => {
         useCase.execute({ id: 999, userId: 1 }),
       ).rejects.toBeInstanceOf(CategoryNotFoundError);
 
-      await expect(
-        useCase.execute({ id: 999, userId: 1 }),
-      ).rejects.toThrow('カテゴリID 999 が見つかりません');
+      await expect(useCase.execute({ id: 999, userId: 1 })).rejects.toThrow(
+        'カテゴリID 999 が見つかりません',
+      );
     });
 
     it('他のユーザーのカテゴリは取得できない（リポジトリがnullを返す）', async () => {

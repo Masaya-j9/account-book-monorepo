@@ -75,13 +75,17 @@ export class GetCategoryUseCase {
   ): Effect.Effect<UserCategoryRecord, GetCategoryError> {
     return pipe(
       Effect.promise(() =>
-        this.categoryRepository.findByIdWithUser(normalized.id, normalized.userId),
+        this.categoryRepository.findByIdWithUser(
+          normalized.id,
+          normalized.userId,
+        ),
       ).pipe(
-        Effect.mapError((cause) =>
-          new UnexpectedGetCategoryError({
-            message: 'カテゴリの取得に失敗しました',
-            cause: this.normalizeError(cause),
-          }),
+        Effect.mapError(
+          (cause) =>
+            new UnexpectedGetCategoryError({
+              message: 'カテゴリの取得に失敗しました',
+              cause: this.normalizeError(cause),
+            }),
         ),
       ),
       Effect.flatMap((category) =>

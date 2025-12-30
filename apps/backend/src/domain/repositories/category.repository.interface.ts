@@ -49,10 +49,15 @@ export interface ICategoryRepository {
   /**
    * ページネーション付きでカテゴリ一覧を取得する
    */
-  findAllWithPagination(options: FindAllOptions): Promise<PaginatedResult<UserCategoryRecord>>;
+  findAllWithPagination(
+    options: FindAllOptions,
+  ): Promise<PaginatedResult<UserCategoryRecord>>;
 
   /**
    * IDでカテゴリを取得する（ユーザーカテゴリ情報付き）
    */
-  findByIdWithUser(id: number, userId: number): Promise<UserCategoryRecord | null>;
+  findByIdWithUser(
+    id: number,
+    userId: number,
+  ): Promise<UserCategoryRecord | null>;
 }
