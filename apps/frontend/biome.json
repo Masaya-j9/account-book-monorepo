@@ -6,8 +6,16 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignoreUnknown": true,
-    "includes": ["**", "!node_modules", "!.next", "!dist", "!build"]
+    "ignoreUnknown": false,
+    "experimentalScannerIgnores": ["node_modules", ".next"],
+    "includes": [
+      "src/**/*.{js,jsx,ts,tsx,json,md,mdx,yml,yaml,html,css,scss,sass}",
+      "!**/node_modules/**/*",
+      "!**/.next",
+      "!**/dist",
+      "!**/out",
+      "!**/.vercel"
+    ]
   },
   "formatter": {
     "enabled": true,

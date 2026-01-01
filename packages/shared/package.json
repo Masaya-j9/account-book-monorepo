@@ -1,31 +1,31 @@
 {
-  "name": "@account-book-app/shared",
-  "version": "1.0.0",
-  "description": "",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
-  },
-  "scripts": {
-    "dev": "tsup src/index.ts --format esm --dts --out-dir dist --watch",
-    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean",
-    "test": "echo \"No tests for shared package\"",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write .",
-    "format": "biome format --write ."
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "zod": "^4.1.12"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^1.9.4"
-  }
+	"name": "@account-book-app/shared",
+	"version": "1.0.0",
+	"description": "",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"dev": "tsup src/index.ts --format esm --dts --out-dir dist --watch",
+		"build": "tsup src/index.ts --format esm --dts --out-dir dist --clean",
+		"test": "echo \"No tests for shared package\"",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write ."
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"zod": "^4.1.12"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.2.0"
+	}
 }
