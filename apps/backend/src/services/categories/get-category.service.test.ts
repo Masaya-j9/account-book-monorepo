@@ -42,6 +42,7 @@ describe('GetCategoryUseCase（カテゴリ単体取得）', () => {
         totalPages: 0,
       })),
       findByIdWithUser: vi.fn(async (_id: number, _userId: number) => null),
+      update: vi.fn(),
       ...overrides,
     };
 

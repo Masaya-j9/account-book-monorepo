@@ -1,8 +1,8 @@
-# カテゴリー参照API設計ドキュメント
+# カテゴリー参照・更新API設計ドキュメント
 
 ## 概要
 
-このドキュメントは、Issue #10「カテゴリー参照ビジネスロジック（オニオンアーキテクチャ）論点まとめ」に基づいて実装されたカテゴリー参照API（カテゴリ一覧取得/単体取得）の設計方針と実装詳細を記述します。
+このドキュメントは、Issue #10「カテゴリー参照ビジネスロジック（オニオンアーキテクチャ）論点まとめ」およびIssue #15「カテゴリ更新用エンドポイント（/category）の新規実装計画」に基づいて実装されたカテゴリーAPI（カテゴリ一覧取得/単体取得/更新）の設計方針と実装詳細を記述します。
 
 ## アーキテクチャ概要
 
@@ -23,6 +23,11 @@
 - `ICategoryRepository`: リポジトリの抽象インターフェース
   - `findAllWithPagination`: ページネーション付き一覧取得
   - `findByIdWithUser`: ユーザー権限を考慮した単体取得
+  - `update`: カテゴリ情報の更新
+- `UpdateCategoryData`: 更新データの型定義
+  - `isVisible?: boolean`: 表示/非表示
+  - `customName?: string | null`: カスタム名（null可）
+  - `displayOrder?: number`: 表示順
 
 #### 2. Application Layer（アプリケーション層）
 **場所**: `apps/backend/src/services/categories/`
@@ -35,12 +40,19 @@
 **実装内容**:
 - `ListCategoriesUseCase`: カテゴリ一覧取得のユースケース
 - `GetCategoryUseCase`: カテゴリ単体取得のユースケース
+- `UpdateCategoryUseCase`: カテゴリ更新のユースケース
 
-**エラー定義**:
+**エラー定義（参照系）**:
 - `InvalidPaginationError`: ページネーションパラメータ不正
 - `InvalidSortParameterError`: ソートパラメータ不正
 - `CategoryNotFoundError`: カテゴリが存在しない
 - `InvalidCategoryIdError`: カテゴリID不正
+
+**エラー定義（更新系）**:
+- `CategoryNotFoundError`: カテゴリが存在しない
+- `DefaultCategoryUpdateForbiddenError`: デフォルトカテゴリの更新禁止
+- `InvalidUpdateDataError`: 更新データ不正
+- `UnexpectedUpdateCategoryError`: 予期しないエラー
 
 #### 3. Infrastructure Layer（インフラストラクチャ層）
 **場所**: `apps/backend/src/infrastructure/repositories/`
@@ -57,6 +69,7 @@
 **実装内容**:
 - `categoryRouter.list`: カテゴリ一覧取得エンドポイント
 - `categoryRouter.get`: カテゴリ単体取得エンドポイント
+- `categoryRouter.update`: カテゴリ更新エンドポイント
 
 **エラーマッピング**:
 | アプリケーションエラー | HTTPステータス |
@@ -64,7 +77,9 @@
 | InvalidPaginationError | 400 BAD_REQUEST |
 | InvalidSortParameterError | 400 BAD_REQUEST |
 | InvalidCategoryIdError | 400 BAD_REQUEST |
+| InvalidUpdateDataError | 400 BAD_REQUEST |
 | CategoryNotFoundError | 404 NOT_FOUND |
+| DefaultCategoryUpdateForbiddenError | 403 FORBIDDEN |
 | Unexpected*Error | 500 INTERNAL_SERVER_ERROR |
 
 ## バリデーション方針
@@ -81,6 +96,17 @@
 
 #### カテゴリ単体取得（get）
 - `id`: 1以上の整数
+
+#### カテゴリ更新（update）
+- `categoryId`: 1以上の整数（必須）
+- `isVisible`: boolean（任意）
+- `customName`: 1〜50文字の文字列（任意、空文字はnullに正規化）
+- `displayOrder`: 0以上の整数（任意）
+
+**更新のビジネスルール**:
+- デフォルトカテゴリ（`isDefault=true`）は更新不可
+- 少なくとも1つのフィールドを指定する必要がある
+- `customName`が空文字の場合は自動的に`null`に変換される
 
 ## ページネーション設計
 
@@ -143,6 +169,7 @@ Effect.Effect<Result, Error>
 
 - ListCategoriesUseCase: 10テスト（正常系5 + 異常系5）
 - GetCategoryUseCase: 8テスト（正常系3 + 異常系5）
+- UpdateCategoryUseCase: 10テスト（正常系5 + 異常系5）
 
 ## 技術スタック
 
@@ -156,3 +183,4 @@ Effect.Effect<Result, Error>
 ## 参考資料
 
 - [Issue #10](https://github.com/Masaya-j9/account-book-monorepo/issues/10)
+- [Issue #15](https://github.com/Masaya-j9/account-book-monorepo/issues/15)

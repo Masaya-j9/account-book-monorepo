@@ -9,6 +9,8 @@ import {
   categoriesGetByIdOutputSchema,
   categoriesListInputSchema,
   categoriesListOutputSchema,
+  categoriesUpdateInputSchema,
+  categoriesUpdateOutputSchema,
 } from '@account-book-app/shared';
 import { TRPCError } from '@trpc/server';
 import { createRequestContainer } from '../../infrastructre/di/container';
@@ -28,6 +30,12 @@ import {
   InvalidPaginationError,
   InvalidSortParameterError,
 } from '../../services/categories/read-category.errors';
+import {
+  DefaultCategoryUpdateForbiddenError,
+  InvalidUpdateDataError,
+  CategoryNotFoundError as UpdateCategoryNotFoundError,
+} from '../../services/categories/update-category.errors';
+import type { UpdateCategoryUseCase } from '../../services/categories/update-category.service';
 import { protectedProcedure, router } from '../trpc/trpc';
 
 const resolveCreateCategoryUseCase = (db: NodePgDatabase) => {
@@ -43,6 +51,11 @@ const resolveListCategoriesUseCase = (db: NodePgDatabase) => {
 const resolveGetCategoryUseCase = (db: NodePgDatabase) => {
   const container = createRequestContainer(db);
   return container.get<GetCategoryUseCase>(TOKENS.GetCategoryUseCase);
+};
+
+const resolveUpdateCategoryUseCase = (db: NodePgDatabase) => {
+  const container = createRequestContainer(db);
+  return container.get<UpdateCategoryUseCase>(TOKENS.UpdateCategoryUseCase);
 };
 
 const toCreateCategoryTrpcError = <T>(cause: T) => {
@@ -133,6 +146,40 @@ const toGetCategoryTrpcError = <T>(cause: T) => {
   });
 };
 
+const toUpdateCategoryTrpcError = <T>(cause: T) => {
+  const error = cause instanceof Error ? cause : new Error(String(cause));
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('[categories.update] error:', error);
+  }
+
+  if (error instanceof UpdateCategoryNotFoundError) {
+    return new TRPCError({
+      code: 'NOT_FOUND',
+      message: error.message,
+    });
+  }
+
+  if (error instanceof DefaultCategoryUpdateForbiddenError) {
+    return new TRPCError({
+      code: 'FORBIDDEN',
+      message: error.message,
+    });
+  }
+
+  if (error instanceof InvalidUpdateDataError) {
+    return new TRPCError({
+      code: 'BAD_REQUEST',
+      message: error.message,
+    });
+  }
+
+  return new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: 'カテゴリの更新に失敗しました',
+  });
+};
+
 export const categoryRouter = router({
   create: protectedProcedure
     .input(categoriesCreateInputSchema)
@@ -190,6 +237,28 @@ export const categoryRouter = router({
         return result;
       } catch (error) {
         throw toGetCategoryTrpcError(error);
+      }
+    }),
+
+  update: protectedProcedure
+    .input(categoriesUpdateInputSchema)
+    .output(categoriesUpdateOutputSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const updateCategoryUseCase = resolveUpdateCategoryUseCase(ctx.db);
+        const category = await updateCategoryUseCase.execute({
+          categoryId: input.categoryId,
+          userId: ctx.userId,
+          isVisible: input.isVisible,
+          customName: input.customName,
+          displayOrder: input.displayOrder,
+        });
+
+        return {
+          category,
+        };
+      } catch (error) {
+        throw toUpdateCategoryTrpcError(error);
       }
     }),
 });
