@@ -3,11 +3,14 @@ import 'reflect-metadata';
 import type { NodePgDatabase } from '@account-book-app/db';
 import { Container } from 'inversify';
 import type { ICategoryRepository } from '../../domain/repositories/category.repository.interface';
+import type { ITransactionRepository } from '../../domain/repositories/transaction.repository.interface';
 import { CreateCategoryUseCase } from '../../services/categories/create.category.service';
 import { GetCategoryUseCase } from '../../services/categories/get-category.service';
 import { ListCategoriesUseCase } from '../../services/categories/list-categories.service';
 import { UpdateCategoryUseCase } from '../../services/categories/update-category.service';
+import { CreateTransactionUseCase } from '../../services/transactions/create-transaction.service';
 import { CategoryRepository } from '../repositories/category.repository';
+import { TransactionRepository } from '../repositories/transaction.repository';
 import { TOKENS } from './tokens';
 
 export const createRequestContainer = (db: NodePgDatabase) => {
@@ -18,6 +21,10 @@ export const createRequestContainer = (db: NodePgDatabase) => {
   container
     .bind<ICategoryRepository>(TOKENS.CategoryRepository)
     .to(CategoryRepository);
+
+  container
+    .bind<ITransactionRepository>(TOKENS.TransactionRepository)
+    .to(TransactionRepository);
 
   container
     .bind<CreateCategoryUseCase>(TOKENS.CreateCategoryUseCase)
@@ -34,6 +41,10 @@ export const createRequestContainer = (db: NodePgDatabase) => {
   container
     .bind<UpdateCategoryUseCase>(TOKENS.UpdateCategoryUseCase)
     .to(UpdateCategoryUseCase);
+
+  container
+    .bind<CreateTransactionUseCase>(TOKENS.CreateTransactionUseCase)
+    .to(CreateTransactionUseCase);
 
   return container;
 };
