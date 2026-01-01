@@ -23,6 +23,7 @@ import type {
   FindAllOptions,
   ICategoryRepository,
   PaginatedResult,
+  UpdateCategoryData,
 } from '../../domain/repositories/category.repository.interface';
 import { TOKENS } from '../di/tokens';
 
@@ -231,6 +232,57 @@ export class CategoryRepository implements ICategoryRepository {
       transactionType.code,
       userCategory,
     );
+  }
+
+  async update(
+    categoryId: number,
+    userId: number,
+    data: UpdateCategoryData,
+  ): Promise<UserCategoryRecord> {
+    // 更新対象のフィールドを構築（undefinedのフィールドは更新しない）
+    const updateFields: Record<string, unknown> = {};
+
+    if (data.isVisible !== undefined) {
+      updateFields.isVisible = data.isVisible;
+    }
+    if (data.customName !== undefined) {
+      updateFields.customName = data.customName;
+    }
+    if (data.displayOrder !== undefined) {
+      updateFields.displayOrder = data.displayOrder;
+    }
+
+    // updatedAtは常に更新
+    updateFields.updatedAt = sql`now()`;
+
+    // user_categoriesテーブルを更新
+    const [updatedUserCategory] = await this.db
+      .update(userCategories)
+      .set(updateFields)
+      .where(
+        and(
+          eq(userCategories.categoryId, categoryId),
+          eq(userCategories.userId, userId),
+        ),
+      )
+      .returning();
+
+    if (!updatedUserCategory) {
+      throw new Error(
+        `UserCategory not found for categoryId: ${categoryId}, userId: ${userId}`,
+      );
+    }
+
+    // 更新後のカテゴリ情報を取得
+    const result = await this.findByIdWithUser(categoryId, userId);
+
+    if (!result) {
+      throw new Error(
+        `Category not found after update: categoryId: ${categoryId}`,
+      );
+    }
+
+    return result;
   }
 
   private toDomainEntity(

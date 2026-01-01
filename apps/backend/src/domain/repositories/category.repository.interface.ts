@@ -25,6 +25,12 @@ export type PaginatedResult<T> = {
   totalPages: number;
 };
 
+export type UpdateCategoryData = {
+  isVisible?: boolean;
+  customName?: string | null;
+  displayOrder?: number;
+};
+
 export interface ICategoryRepository {
   /**
    * カテゴリを作成する
@@ -60,4 +66,13 @@ export interface ICategoryRepository {
     id: number,
     userId: number,
   ): Promise<UserCategoryRecord | null>;
+
+  /**
+   * カテゴリを更新する（user_categories情報のみ更新）
+   */
+  update(
+    categoryId: number,
+    userId: number,
+    data: UpdateCategoryData,
+  ): Promise<UserCategoryRecord>;
 }

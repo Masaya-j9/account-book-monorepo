@@ -54,6 +54,7 @@ describe('ListCategoriesUseCase（カテゴリ一覧取得）', () => {
         makePaginatedResult(),
       ),
       findByIdWithUser: vi.fn(async (_id: number, _userId: number) => null),
+      update: vi.fn(),
       ...overrides,
     };
 

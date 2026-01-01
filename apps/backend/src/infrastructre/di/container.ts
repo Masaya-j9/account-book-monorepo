@@ -6,6 +6,7 @@ import type { ICategoryRepository } from '../../domain/repositories/category.rep
 import { CreateCategoryUseCase } from '../../services/categories/create.category.service';
 import { GetCategoryUseCase } from '../../services/categories/get-category.service';
 import { ListCategoriesUseCase } from '../../services/categories/list-categories.service';
+import { UpdateCategoryUseCase } from '../../services/categories/update-category.service';
 import { CategoryRepository } from '../repositories/category.repository';
 import { TOKENS } from './tokens';
 
@@ -29,6 +30,10 @@ export const createRequestContainer = (db: NodePgDatabase) => {
   container
     .bind<GetCategoryUseCase>(TOKENS.GetCategoryUseCase)
     .to(GetCategoryUseCase);
+
+  container
+    .bind<UpdateCategoryUseCase>(TOKENS.UpdateCategoryUseCase)
+    .to(UpdateCategoryUseCase);
 
   return container;
 };
