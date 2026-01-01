@@ -35,6 +35,10 @@ type NormalizedInput = {
   updateData: UpdateCategoryData;
 };
 
+type ValidatedInput = NormalizedInput & {
+  category: UserCategoryRecord;
+};
+
 @injectable()
 export class UpdateCategoryUseCase {
   @inject(TOKENS.CategoryRepository)
@@ -51,8 +55,7 @@ export class UpdateCategoryUseCase {
   ): Effect.Effect<UserCategoryRecord, UpdateCategoryError> {
     return pipe(
       this.normalizeInput(input),
-      Effect.flatMap((value) => this.validateCategoryExists(value)),
-      Effect.flatMap((value) => this.validateNotDefaultCategory(value)),
+      Effect.flatMap((value) => this.validateCategoryExistsAndNotDefault(value)),
       Effect.flatMap((value) => this.updateCategory(value)),
     );
   }
@@ -122,9 +125,9 @@ export class UpdateCategoryUseCase {
     });
   }
 
-  private validateCategoryExists(
+  private validateCategoryExistsAndNotDefault(
     value: NormalizedInput,
-  ): Effect.Effect<NormalizedInput, UpdateCategoryError> {
+  ): Effect.Effect<ValidatedInput, UpdateCategoryError> {
     return pipe(
       Effect.promise(() =>
         this.categoryRepository.findByIdWithUser(
@@ -140,39 +143,8 @@ export class UpdateCategoryUseCase {
             }),
         ),
       ),
-      Effect.flatMap((category) => {
-        if (category === null) {
-          return Effect.fail(
-            new CategoryNotFoundError({
-              message: `カテゴリ（ID: ${value.categoryId}）が見つかりません`,
-              categoryId: value.categoryId,
-            }),
-          );
-        }
-        return Effect.succeed(value);
-      }),
-    );
-  }
-
-  private validateNotDefaultCategory(
-    value: NormalizedInput,
-  ): Effect.Effect<NormalizedInput, UpdateCategoryError> {
-    return pipe(
-      Effect.promise(() =>
-        this.categoryRepository.findById(value.categoryId),
-      ).pipe(
-        Effect.mapError(
-          (cause) =>
-            new UnexpectedUpdateCategoryError({
-              message: 'カテゴリの取得に失敗しました',
-              cause: this.normalizeError(cause),
-            }),
-        ),
-      ),
       Effect.flatMap(
-        (
-          category,
-        ): Effect.Effect<NormalizedInput, UpdateCategoryError> => {
+        (category): Effect.Effect<ValidatedInput, UpdateCategoryError> => {
           if (category === null) {
             return Effect.fail(
               new CategoryNotFoundError({
@@ -192,14 +164,14 @@ export class UpdateCategoryUseCase {
             );
           }
 
-          return Effect.succeed(value);
+          return Effect.succeed({ ...value, category });
         },
       ),
     );
   }
 
   private updateCategory(
-    value: NormalizedInput,
+    value: ValidatedInput,
   ): Effect.Effect<UserCategoryRecord, UpdateCategoryError> {
     return pipe(
       Effect.promise(() =>

@@ -94,7 +94,6 @@ describe('UpdateCategoryUseCase（カテゴリ更新）', () => {
       });
 
       expect(repo.findByIdWithUser).toHaveBeenCalledWith(1, 1);
-      expect(repo.findById).toHaveBeenCalledWith(1);
       expect(repo.update).toHaveBeenCalledWith(1, 1, { isVisible: false });
       expect(result.isVisible).toBe(false);
     });
@@ -206,7 +205,9 @@ describe('UpdateCategoryUseCase（カテゴリ更新）', () => {
 
     it('デフォルトカテゴリの更新は禁止される', async () => {
       const { useCase } = setup({
-        findById: vi.fn(async () => makeCategoryRecord({ isDefault: true })),
+        findByIdWithUser: vi.fn(async () =>
+          makeUserCategoryRecord({ isDefault: true }),
+        ),
       });
 
       await expect(

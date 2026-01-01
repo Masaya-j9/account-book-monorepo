@@ -63,7 +63,7 @@ export type CategoriesGetByIdInput = z.infer<
 // categories.update
 export const categoriesUpdateInputSchema = z.object({
 	categoryId: z.number().int().positive(),
-	isVisible: z.boolean(),
+	isVisible: z.boolean().optional(),
 	customName: z
 		.string()
 		.min(1, "カスタム名は必須です")

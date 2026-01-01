@@ -98,8 +98,8 @@
 - `id`: 1以上の整数
 
 #### カテゴリ更新（update）
-- `categoryId`: 1以上の整数
-- `isVisible`: boolean（必須）
+- `categoryId`: 1以上の整数（必須）
+- `isVisible`: boolean（任意）
 - `customName`: 1〜50文字の文字列（任意、空文字はnullに正規化）
 - `displayOrder`: 0以上の整数（任意）
 
