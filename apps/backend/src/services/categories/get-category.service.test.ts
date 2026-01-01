@@ -77,7 +77,7 @@ describe('GetCategoryUseCase（カテゴリ単体取得）', () => {
         name: '光熱費',
         customName: 'マイ光熱費',
       });
-      const { useCase, repo } = setup({
+      const { useCase } = setup({
         findByIdWithUser: vi.fn(async () => category),
       });
 
@@ -92,7 +92,7 @@ describe('GetCategoryUseCase（カテゴリ単体取得）', () => {
         name: '旧カテゴリ',
         isVisible: false,
       });
-      const { useCase, repo } = setup({
+      const { useCase } = setup({
         findByIdWithUser: vi.fn(async () => category),
       });
 
@@ -132,7 +132,7 @@ describe('GetCategoryUseCase（カテゴリ単体取得）', () => {
     });
 
     it('カテゴリが存在しない場合は例外になる', async () => {
-      const { useCase, repo } = setup({
+      const { useCase } = setup({
         findByIdWithUser: vi.fn(async () => null),
       });
 

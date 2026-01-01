@@ -10,7 +10,6 @@ import type { ICategoryRepository } from '../../domain/repositories/category.rep
 import { TOKENS } from '../../infrastructre/di/tokens';
 import { Effect, pipe } from '../../shared/result';
 import {
-  CategoryAccessForbiddenError,
   CategoryNotFoundError,
   type GetCategoryError,
   InvalidCategoryIdError,

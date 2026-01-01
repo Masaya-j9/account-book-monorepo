@@ -246,12 +246,17 @@ describe('ListCategoriesUseCase（カテゴリ一覧取得）', () => {
     it('sortBy が不正な場合は例外になる', async () => {
       const { useCase } = setup();
 
+      const invalidSortBy = 'invalid' as unknown as
+        | 'name'
+        | 'createdAt'
+        | 'displayOrder';
+
       await expect(
-        useCase.execute({ userId: 1, sortBy: 'invalid' as any }),
+        useCase.execute({ userId: 1, sortBy: invalidSortBy }),
       ).rejects.toBeInstanceOf(InvalidSortParameterError);
 
       await expect(
-        useCase.execute({ userId: 1, sortBy: 'invalid' as any }),
+        useCase.execute({ userId: 1, sortBy: invalidSortBy }),
       ).rejects.toThrow(
         'sortBy は name, createdAt, displayOrder のいずれかである必要があります',
       );

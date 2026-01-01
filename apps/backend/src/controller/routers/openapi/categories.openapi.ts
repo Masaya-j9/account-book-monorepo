@@ -2,7 +2,6 @@ import type { NodePgDatabase } from '@account-book-app/db';
 import {
   categoriesCreateInputSchema,
   categoriesCreateOutputSchema,
-  categoriesGetByIdInputSchema,
   categoriesGetByIdOutputSchema,
   categoriesListInputSchema,
   categoriesListOutputSchema,
@@ -63,6 +62,7 @@ const errorResponseSchema = z.object({
 const createCategoryRoute = createRoute({
   method: 'post',
   path: '/categories',
+  tags: ['categories'],
   request: {
     body: {
       required: true,
@@ -112,6 +112,7 @@ const createCategoryRoute = createRoute({
 const listCategoriesRoute = createRoute({
   method: 'get',
   path: '/categories',
+  tags: ['categories'],
   request: {
     query: categoriesListInputSchema,
   },
@@ -146,6 +147,7 @@ const listCategoriesRoute = createRoute({
 const getCategoryRoute = createRoute({
   method: 'get',
   path: '/categories/{id}',
+  tags: ['categories'],
   request: {
     params: z.object({
       id: z.string().regex(/^\d+$/).transform(Number),
@@ -190,6 +192,7 @@ const getCategoryRoute = createRoute({
 const updateCategoryRoute = createRoute({
   method: 'put',
   path: '/categories/{id}',
+  tags: ['categories'],
   request: {
     params: z.object({
       id: z.string().regex(/^\d+$/).transform(Number),
