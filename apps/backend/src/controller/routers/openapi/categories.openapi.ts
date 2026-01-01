@@ -6,6 +6,8 @@ import {
   categoriesGetByIdOutputSchema,
   categoriesListInputSchema,
   categoriesListOutputSchema,
+  categoriesUpdateInputSchema,
+  categoriesUpdateOutputSchema,
 } from '@account-book-app/shared';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute, z } from '@hono/zod-openapi';
@@ -27,6 +29,12 @@ import {
   InvalidPaginationError,
   InvalidSortParameterError,
 } from '../../../services/categories/read-category.errors';
+import {
+  DefaultCategoryUpdateForbiddenError,
+  InvalidUpdateDataError,
+  CategoryNotFoundError as UpdateCategoryNotFoundError,
+} from '../../../services/categories/update-category.errors';
+import type { UpdateCategoryUseCase } from '../../../services/categories/update-category.service';
 
 const resolveCreateCategoryUseCase = (db: NodePgDatabase) => {
   const container = createRequestContainer(db);
@@ -41,6 +49,11 @@ const resolveListCategoriesUseCase = (db: NodePgDatabase) => {
 const resolveGetCategoryUseCase = (db: NodePgDatabase) => {
   const container = createRequestContainer(db);
   return container.get<GetCategoryUseCase>(TOKENS.GetCategoryUseCase);
+};
+
+const resolveUpdateCategoryUseCase = (db: NodePgDatabase) => {
+  const container = createRequestContainer(db);
+  return container.get<UpdateCategoryUseCase>(TOKENS.UpdateCategoryUseCase);
 };
 
 const errorResponseSchema = z.object({
@@ -174,6 +187,66 @@ const getCategoryRoute = createRoute({
   },
 });
 
+const updateCategoryRoute = createRoute({
+  method: 'put',
+  path: '/categories/{id}',
+  request: {
+    params: z.object({
+      id: z.string().regex(/^\d+$/).transform(Number),
+    }),
+    body: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: categoriesUpdateInputSchema.omit({ categoryId: true }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'カテゴリ更新成功',
+      content: {
+        'application/json': {
+          schema: categoriesUpdateOutputSchema,
+        },
+      },
+    },
+    400: {
+      description: '不正なリクエスト（更新データが不正）',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    403: {
+      description: 'デフォルトカテゴリの更新は禁止されています',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    404: {
+      description: 'カテゴリが見つかりません',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    500: {
+      description: 'サーバーエラー',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
 export const registerCategoriesOpenApi = (
   app: OpenAPIHono,
   db: NodePgDatabase,
@@ -272,6 +345,40 @@ export const registerCategoriesOpenApi = (
       }
 
       return c.json({ message: 'カテゴリの取得に失敗しました' }, 500);
+    }
+  });
+
+  app.openapi(updateCategoryRoute, async (c) => {
+    const { id } = c.req.valid('param');
+    const body = c.req.valid('json');
+    const updateCategoryUseCase = resolveUpdateCategoryUseCase(db);
+
+    try {
+      const category = await updateCategoryUseCase.execute({
+        categoryId: id,
+        userId: 1, // TODO: 認証実装後にctx.userIdから取得
+        isVisible: body.isVisible,
+        customName: body.customName,
+        displayOrder: body.displayOrder,
+      });
+
+      return c.json({ category }, 200);
+    } catch (cause) {
+      const error = cause instanceof Error ? cause : new Error(String(cause));
+
+      if (error instanceof InvalidUpdateDataError) {
+        return c.json({ message: error.message }, 400);
+      }
+
+      if (error instanceof DefaultCategoryUpdateForbiddenError) {
+        return c.json({ message: error.message }, 403);
+      }
+
+      if (error instanceof UpdateCategoryNotFoundError) {
+        return c.json({ message: error.message }, 404);
+      }
+
+      return c.json({ message: 'カテゴリの更新に失敗しました' }, 500);
     }
   });
 };
