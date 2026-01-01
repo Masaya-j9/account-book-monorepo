@@ -3,6 +3,7 @@ import { swaggerUI } from '@hono/swagger-ui';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 
 import { registerCategoriesOpenApi } from './categories.openapi';
+import { registerTransactionsOpenApi } from './transactions.openapi';
 
 export const registerOpenApi = (app: OpenAPIHono, db: NodePgDatabase) => {
   app.doc('/openapi.json', (c) => ({
@@ -22,4 +23,5 @@ export const registerOpenApi = (app: OpenAPIHono, db: NodePgDatabase) => {
   app.get('/doc', swaggerUI({ url: '/openapi.json' }));
 
   registerCategoriesOpenApi(app, db);
+  registerTransactionsOpenApi(app, db);
 };
