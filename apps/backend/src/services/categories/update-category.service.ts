@@ -55,7 +55,9 @@ export class UpdateCategoryUseCase {
   ): Effect.Effect<UserCategoryRecord, UpdateCategoryError> {
     return pipe(
       this.normalizeInput(input),
-      Effect.flatMap((value) => this.validateCategoryExistsAndNotDefault(value)),
+      Effect.flatMap((value) =>
+        this.validateCategoryExistsAndNotDefault(value),
+      ),
       Effect.flatMap((value) => this.updateCategory(value)),
     );
   }
