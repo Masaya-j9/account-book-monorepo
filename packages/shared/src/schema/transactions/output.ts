@@ -1,6 +1,6 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import { transactionSchema } from "./commonSchema";
+import { transactionSchema } from './commonSchema';
 
 // =====================================
 // Transactions Router Output Schemas
@@ -8,9 +8,9 @@ import { transactionSchema } from "./commonSchema";
 
 // transactions.create Output
 export const transactionsCreateOutputSchema = z.object({
-	transaction: transactionSchema,
+  transaction: transactionSchema,
 });
 
 export type TransactionsCreateOutput = z.infer<
-	typeof transactionsCreateOutputSchema
+  typeof transactionsCreateOutputSchema
 >;
