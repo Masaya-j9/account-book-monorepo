@@ -115,6 +115,16 @@ export class TransactionDate {
   }
 
   /**
+   * 日付型（DateまたはYYYY-MM-DD文字列）から生成
+   * NOTE: 永続化層/外部I/Fなど入力の型揺れを吸収するための入口
+   */
+  static fromDateLike(value: string | Date): TransactionDate {
+    return value instanceof Date
+      ? TransactionDate.fromDate(value)
+      : TransactionDate.fromString(value);
+  }
+
+  /**
    * ISO8601形式の文字列から生成 (YYYY-MM-DD)
    */
   static fromString(dateString: string): TransactionDate {

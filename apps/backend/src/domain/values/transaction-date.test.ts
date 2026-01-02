@@ -31,6 +31,21 @@ describe('TransactionDate（取引日付）', () => {
       expect(date.day).toBe(15);
     });
 
+    it('fromDateLike: Dateオブジェクトから作成できる', () => {
+      const jsDate = new Date(2025, 0, 15);
+      const date = TransactionDate.fromDateLike(jsDate);
+
+      expect(date.format()).toBe('2025-01-15');
+    });
+
+    it('fromDateLike: YYYY-MM-DD文字列から作成できる', () => {
+      const date = TransactionDate.fromDateLike('2025-01-15');
+
+      expect(date.year).toBe(2025);
+      expect(date.month).toBe(1);
+      expect(date.day).toBe(15);
+    });
+
     it('today: 今日の日付を取得できる', () => {
       const today = TransactionDate.today();
       const now = new Date();
@@ -148,6 +163,19 @@ describe('TransactionDate（取引日付）', () => {
         TransactionDateValidationError,
       );
       expect(() => TransactionDate.fromString('invalid')).toThrow(
+        TransactionDateValidationError,
+      );
+    });
+
+    it('fromDateLike: 不正な形式の文字列は例外になる', () => {
+      expect(() => TransactionDate.fromDateLike('2025/01/15')).toThrow(
+        TransactionDateValidationError,
+      );
+    });
+
+    it('fromDateLike: 無効なDateは例外になる', () => {
+      const invalidDate = new Date('invalid');
+      expect(() => TransactionDate.fromDateLike(invalidDate)).toThrow(
         TransactionDateValidationError,
       );
     });
