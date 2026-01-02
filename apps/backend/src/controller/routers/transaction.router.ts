@@ -5,6 +5,8 @@ import type { NodePgDatabase } from '@account-book-app/db';
 import {
   transactionsCreateInputSchema,
   transactionsCreateOutputSchema,
+  transactionsListInputSchema,
+  transactionsListOutputSchema,
 } from '@account-book-app/shared';
 import { TRPCError } from '@trpc/server';
 
@@ -22,6 +24,8 @@ import {
   TransactionTitleTooLongError,
 } from '../../services/transactions/create-transaction.errors';
 import type { CreateTransactionUseCase } from '../../services/transactions/create-transaction.service';
+import { InvalidPaginationError } from '../../services/transactions/list-transactions.errors';
+import type { ListTransactionsUseCase } from '../../services/transactions/list-transactions.service';
 import { protectedProcedure, router } from '../trpc/trpc';
 
 const resolveCreateTransactionUseCase = (db: NodePgDatabase) => {
@@ -29,6 +33,11 @@ const resolveCreateTransactionUseCase = (db: NodePgDatabase) => {
   return container.get<CreateTransactionUseCase>(
     TOKENS.CreateTransactionUseCase,
   );
+};
+
+const resolveListTransactionsUseCase = (db: NodePgDatabase) => {
+  const container = createRequestContainer(db);
+  return container.get<ListTransactionsUseCase>(TOKENS.ListTransactionsUseCase);
 };
 
 const toCreateTransactionTrpcError = <T>(cause: T) => {
@@ -67,6 +76,26 @@ const toCreateTransactionTrpcError = <T>(cause: T) => {
   });
 };
 
+const toListTransactionsTrpcError = <T>(cause: T) => {
+  const error = cause instanceof Error ? cause : new Error(String(cause));
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('[transactions.list] error:', error);
+  }
+
+  if (error instanceof InvalidPaginationError) {
+    return new TRPCError({
+      code: 'BAD_REQUEST',
+      message: error.message,
+    });
+  }
+
+  return new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: '取引一覧の取得に失敗しました',
+  });
+};
+
 export const transactionRouter = router({
   create: protectedProcedure
     .input(transactionsCreateInputSchema)
@@ -91,6 +120,27 @@ export const transactionRouter = router({
         };
       } catch (error) {
         throw toCreateTransactionTrpcError(error);
+      }
+    }),
+
+  list: protectedProcedure
+    .input(transactionsListInputSchema)
+    .output(transactionsListOutputSchema)
+    .query(async ({ input, ctx }) => {
+      try {
+        const listTransactionsUseCase = resolveListTransactionsUseCase(ctx.db);
+        return await listTransactionsUseCase.execute({
+          userId: ctx.userId,
+          startDate: input.startDate,
+          endDate: input.endDate,
+          type: input.type,
+          categoryIds: input.categoryIds,
+          order: input.order,
+          page: input.page,
+          limit: input.limit,
+        });
+      } catch (error) {
+        throw toListTransactionsTrpcError(error);
       }
     }),
 });
