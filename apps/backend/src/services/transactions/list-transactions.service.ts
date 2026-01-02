@@ -111,9 +111,7 @@ export class ListTransactionsUseCase {
     },
     ListTransactionsError
   > {
-    const allCategoryIds = result.items
-      .map((item) => item.categoryIds)
-      .reduce((acc, ids) => acc.concat(ids), [] as number[]);
+    const allCategoryIds = result.items.flatMap((item) => item.categoryIds);
 
     const uniqueCategoryIds = Array.from(new Set(allCategoryIds));
 
