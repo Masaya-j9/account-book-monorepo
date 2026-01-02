@@ -7,4 +7,5 @@ export const TOKENS = {
   GetCategoryUseCase: Symbol.for('GetCategoryUseCase'),
   UpdateCategoryUseCase: Symbol.for('UpdateCategoryUseCase'),
   CreateTransactionUseCase: Symbol.for('CreateTransactionUseCase'),
+  ListTransactionsUseCase: Symbol.for('ListTransactionsUseCase'),
 } as const;
