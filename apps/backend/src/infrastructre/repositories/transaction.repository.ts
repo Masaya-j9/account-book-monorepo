@@ -234,11 +234,14 @@ export class TransactionRepository implements ITransactionRepository {
       )
       .orderBy(asc(transactionCategories.id));
 
-    const categoryIdsByTransactionId = categoryRows.reduce((map, row) => {
-      const current = map.get(row.transactionId) ?? [];
-      map.set(row.transactionId, [...current, row.categoryId]);
-      return map;
-    }, new Map<number, number[]>());
+    const categoryIdsByTransactionId = new Map(
+      transactionIds.map((transactionId) => [
+        transactionId,
+        categoryRows
+          .filter((row) => row.transactionId === transactionId)
+          .map((row) => row.categoryId),
+      ]),
+    );
 
     const items: TransactionListItemRecord[] = rows.map((row) => ({
       id: row.transaction.id,
