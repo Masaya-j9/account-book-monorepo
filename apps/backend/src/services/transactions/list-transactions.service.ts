@@ -121,11 +121,9 @@ export class ListTransactionsUseCase {
         catch: (cause) =>
           this.createUnexpectedError('カテゴリの取得に失敗しました', cause),
       }),
-      Effect.map((categories) =>
-        categories.reduce((map, category) => {
-          map.set(category.id, category);
-          return map;
-        }, new Map<number, CategoryRecord>()),
+      Effect.map(
+        (categories) =>
+          new Map(categories.map((category) => [category.id, category])),
       ),
       Effect.map((categoriesById) => ({ result, categoriesById })),
     );
