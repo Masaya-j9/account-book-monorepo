@@ -2,6 +2,8 @@ import type { NodePgDatabase } from '@account-book-app/db';
 import {
   transactionsCreateInputSchema,
   transactionsCreateOutputSchema,
+  transactionsListInputSchema,
+  transactionsListOutputSchema,
 } from '@account-book-app/shared';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute, z } from '@hono/zod-openapi';
@@ -20,12 +22,19 @@ import {
   TransactionTitleTooLongError,
 } from '../../../services/transactions/create-transaction.errors';
 import type { CreateTransactionUseCase } from '../../../services/transactions/create-transaction.service';
+import { InvalidPaginationError } from '../../../services/transactions/list-transactions.errors';
+import type { ListTransactionsUseCase } from '../../../services/transactions/list-transactions.service';
 
 const resolveCreateTransactionUseCase = (db: NodePgDatabase) => {
   const container = createRequestContainer(db);
   return container.get<CreateTransactionUseCase>(
     TOKENS.CreateTransactionUseCase,
   );
+};
+
+const resolveListTransactionsUseCase = (db: NodePgDatabase) => {
+  const container = createRequestContainer(db);
+  return container.get<ListTransactionsUseCase>(TOKENS.ListTransactionsUseCase);
 };
 
 const errorResponseSchema = z.object({
@@ -65,6 +74,41 @@ const createTransactionRoute = createRoute({
     },
     404: {
       description: '参照先が見つからない（カテゴリなど）',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    500: {
+      description: 'サーバーエラー',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+const listTransactionsRoute = createRoute({
+  method: 'get',
+  path: '/transactions',
+  tags: ['transactions'],
+  request: {
+    query: transactionsListInputSchema,
+  },
+  responses: {
+    200: {
+      description: '取引一覧取得',
+      content: {
+        'application/json': {
+          schema: transactionsListOutputSchema,
+        },
+      },
+    },
+    400: {
+      description: '不正なリクエスト（ページネーション等）',
       content: {
         'application/json': {
           schema: errorResponseSchema,
@@ -138,6 +182,34 @@ export const registerTransactionsOpenApi = (
       }
 
       return c.json({ message: '取引の作成に失敗しました' }, 500);
+    }
+  });
+
+  app.openapi(listTransactionsRoute, async (c) => {
+    const input = c.req.valid('query');
+    const listTransactionsUseCase = resolveListTransactionsUseCase(db);
+
+    try {
+      const output = await listTransactionsUseCase.execute({
+        userId: 1, // TODO: 認証実装後にctx.userIdから取得
+        startDate: input.startDate,
+        endDate: input.endDate,
+        type: input.type,
+        categoryIds: input.categoryIds,
+        order: input.order,
+        page: input.page,
+        limit: input.limit,
+      });
+
+      return c.json(output, 200);
+    } catch (cause) {
+      const error = cause instanceof Error ? cause : new Error(String(cause));
+
+      if (error instanceof InvalidPaginationError) {
+        return c.json({ message: error.message }, 400);
+      }
+
+      return c.json({ message: '取引一覧の取得に失敗しました' }, 500);
     }
   });
 };

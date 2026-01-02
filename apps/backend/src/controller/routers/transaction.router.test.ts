@@ -11,6 +11,7 @@ import {
   InvalidTransactionTypeError,
   TransactionTitleRequiredError,
 } from '../../services/transactions/create-transaction.errors';
+import { InvalidPaginationError } from '../../services/transactions/list-transactions.errors';
 
 const { createRequestContainerMock, executeMock, getMock } = vi.hoisted(() => {
   const execute = vi.fn();
@@ -109,6 +110,83 @@ describe('transactionRouter（取引ルーター）', () => {
     });
   });
 
+  it('認証済みの場合、取引一覧を取得できる', async () => {
+    executeMock.mockResolvedValueOnce({
+      transactions: [
+        {
+          id: 1,
+          userId: 1,
+          type: 'EXPENSE',
+          title: 'ランチ',
+          amount: 1000,
+          currencyCode: 'JPY',
+          date: '2025-01-01',
+          categories: [
+            { id: 10, name: '食費', type: 'EXPENSE', isDefault: false },
+          ],
+          memo: null,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          updatedAt: '2025-01-01T00:00:00.000Z',
+        },
+      ],
+      pagination: {
+        total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+        hasNext: false,
+        hasPrev: false,
+      },
+    });
+
+    const caller = transactionRouter.createCaller({ db, userId: 1 });
+    const result = await caller.list({
+      page: 1,
+      limit: 20,
+    });
+
+    expect(createRequestContainerMock).toHaveBeenCalledWith(db);
+    expect(getMock).toHaveBeenCalledWith(TOKENS.ListTransactionsUseCase);
+    expect(executeMock).toHaveBeenCalledWith({
+      userId: 1,
+      startDate: undefined,
+      endDate: undefined,
+      type: undefined,
+      categoryIds: undefined,
+      order: 'desc',
+      page: 1,
+      limit: 20,
+    });
+
+    expect(result).toEqual({
+      transactions: [
+        {
+          id: 1,
+          userId: 1,
+          type: 'EXPENSE',
+          title: 'ランチ',
+          amount: 1000,
+          currencyCode: 'JPY',
+          date: '2025-01-01',
+          categories: [
+            { id: 10, name: '食費', type: 'EXPENSE', isDefault: false },
+          ],
+          memo: null,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          updatedAt: '2025-01-01T00:00:00.000Z',
+        },
+      ],
+      pagination: {
+        total: 1,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+        hasNext: false,
+        hasPrev: false,
+      },
+    });
+  });
+
   describe('異常系', () => {
     it('未認証の場合は UNAUTHORIZED になる', async () => {
       const caller = transactionRouter.createCaller({ db });
@@ -120,6 +198,15 @@ describe('transactionRouter（取引ルーター）', () => {
           amount: 450,
           date: '2025-01-01',
           categoryId: 10,
+        }),
+      ).rejects.toMatchObject({
+        code: 'UNAUTHORIZED',
+      });
+
+      await expect(
+        caller.list({
+          page: 1,
+          limit: 20,
         }),
       ).rejects.toMatchObject({
         code: 'UNAUTHORIZED',
@@ -136,6 +223,14 @@ describe('transactionRouter（取引ルーター）', () => {
           amount: 450,
           date: '2025-01-01',
           categoryId: 10,
+        }),
+      ).rejects.toBeInstanceOf(TRPCError);
+      expect(executeMock).not.toHaveBeenCalled();
+
+      await expect(
+        caller.list({
+          page: 0,
+          limit: 20,
         }),
       ).rejects.toBeInstanceOf(TRPCError);
       expect(executeMock).not.toHaveBeenCalled();
@@ -236,6 +331,41 @@ describe('transactionRouter（取引ルーター）', () => {
       expect(error).toMatchObject({
         code: 'INTERNAL_SERVER_ERROR',
         message: '取引の作成に失敗しました',
+      });
+    });
+
+    it('ページネーションの不正は BAD_REQUEST に変換される', async () => {
+      executeMock.mockRejectedValueOnce(
+        new InvalidPaginationError('page は1以上'),
+      );
+
+      const caller = transactionRouter.createCaller({ db, userId: 1 });
+
+      await expect(
+        caller.list({
+          page: 1,
+          limit: 20,
+        }),
+      ).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+      });
+    });
+
+    it('list の想定外例外は INTERNAL_SERVER_ERROR に変換される', async () => {
+      executeMock.mockRejectedValueOnce(new Error('boom'));
+
+      const caller = transactionRouter.createCaller({ db, userId: 1 });
+      const error = await caller
+        .list({
+          page: 1,
+          limit: 20,
+        })
+        .catch((e) => e);
+
+      expect(error).toBeInstanceOf(TRPCError);
+      expect(error).toMatchObject({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: '取引一覧の取得に失敗しました',
       });
     });
   });

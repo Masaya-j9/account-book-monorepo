@@ -98,6 +98,14 @@ package "収支管理コンテキスト" {
     + contains(date: Date): boolean
   }
 
+  class Pagination <<Value Object>> {
+    + limit: number
+    + offset: number
+    --
+    + next(): Pagination
+    + prev(): Pagination
+  }
+
   enum PeriodType <<Enumeration>> {
     MONTHLY
     YEARLY
@@ -177,6 +185,9 @@ Summary *-- Period : 含む >
 
 ' 期間と期間種別の関係
 Period --> PeriodType : 持つ >
+
+' 取引一覧取得とページネーション
+Pagination ..> Transaction : <<一覧取得>>
 
 ' 年間サマリーと月次サマリーの関係
 YearlySummary *-- "12" MonthlySummary : 含む >
@@ -272,6 +283,17 @@ note bottom of Period
   - MONTHLYの場合はmonthが必須
   - YEARLYの場合はmonthはnull
   - yearは必須
+end note
+
+note bottom of Pagination
+  **【不変条件（ページネーション）】**
+  - limit は 1 以上
+  - limit は上限を超えない（例: 最大100件）
+  - offset は 0 以上
+
+  **【一覧取得のルール】**
+  - 並び順は安定である（同一条件で同じ順序になる）
+  - デフォルトの並び順は日付の降順（新しい順）
 end note
 
 note bottom of YearlySummary
