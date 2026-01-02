@@ -4,8 +4,25 @@
 import type {
   CreateTransactionData,
   Transaction,
+  TransactionListItemRecord,
   TransactionRecord,
 } from '../entities/transaction.entity';
+
+export type ListTransactionsQuery = {
+  userId: number;
+  startDate?: string;
+  endDate?: string;
+  type?: 'INCOME' | 'EXPENSE';
+  categoryIds?: number[];
+  order: 'asc' | 'desc';
+  limit: number;
+  offset: number;
+};
+
+export type ListTransactionsResult = {
+  items: TransactionListItemRecord[];
+  total: number;
+};
 
 export interface ITransactionRepository {
   /**
@@ -31,6 +48,11 @@ export interface ITransactionRepository {
     startDate: string,
     endDate: string,
   ): Promise<TransactionRecord[]>;
+
+  /**
+   * ユーザーIDで取引一覧を取得する（ページネーション/フィルタ付き）
+   */
+  listByUserId(query: ListTransactionsQuery): Promise<ListTransactionsResult>;
 
   /**
    * 取引を更新する

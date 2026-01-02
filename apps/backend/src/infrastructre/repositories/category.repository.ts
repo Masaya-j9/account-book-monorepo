@@ -30,6 +30,15 @@ import { TOKENS } from '../di/tokens';
 // displayOrderが未設定の場合のデフォルト値
 const DEFAULT_DISPLAY_ORDER = 0;
 
+const buildInNumberList = (
+  column: typeof categories.id,
+  values: number[],
+): ReturnType<typeof sql> =>
+  sql`${column} in (${sql.join(
+    values.map((v) => sql`${v}`),
+    sql`, `,
+  )})`;
+
 @injectable()
 export class CategoryRepository implements ICategoryRepository {
   @inject(TOKENS.Db)
@@ -124,6 +133,41 @@ export class CategoryRepository implements ICategoryRepository {
       .innerJoin(categories, eq(userCategories.categoryId, categories.id))
       .innerJoin(transactionTypes, eq(categories.typeId, transactionTypes.id))
       .where(eq(userCategories.userId, userId));
+
+    return result.map(({ category, transactionType }) =>
+      this.toDomainEntity(category, transactionType.code),
+    );
+  }
+
+  async findByIds(userId: number, ids: number[]): Promise<CategoryRecord[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    // NOTE:
+    // - デフォルトカテゴリ（isDefault=true）は user_categories に紐づきが無くても利用可能
+    // - カスタムカテゴリは user_categories（未削除）に紐づいているもののみ利用可能
+    const result = await this.db
+      .select({
+        category: categories,
+        transactionType: transactionTypes,
+      })
+      .from(categories)
+      .innerJoin(transactionTypes, eq(categories.typeId, transactionTypes.id))
+      .leftJoin(
+        userCategories,
+        and(
+          eq(userCategories.categoryId, categories.id),
+          eq(userCategories.userId, userId),
+          sql`${userCategories.deletedAt} is null`,
+        ),
+      )
+      .where(
+        and(
+          buildInNumberList(categories.id, ids),
+          sql`(${categories.isDefault} = true or ${userCategories.id} is not null)`,
+        ),
+      );
 
     return result.map(({ category, transactionType }) =>
       this.toDomainEntity(category, transactionType.code),

@@ -1,4 +1,6 @@
 import {
+  and,
+  asc,
   count,
   currencies,
   desc,
@@ -14,9 +16,15 @@ import { inject, injectable } from 'inversify';
 import type {
   CreateTransactionData,
   Transaction,
+  TransactionListItemRecord,
   TransactionRecord,
 } from '../../domain/entities/transaction.entity';
-import type { ITransactionRepository } from '../../domain/repositories/transaction.repository.interface';
+import type {
+  ITransactionRepository,
+  ListTransactionsQuery,
+  ListTransactionsResult,
+} from '../../domain/repositories/transaction.repository.interface';
+import { TransactionDate } from '../../domain/values/transaction-date';
 import { TOKENS } from '../di/tokens';
 
 const DEFAULT_CURRENCY_CODE = 'JPY' as const;
@@ -36,7 +44,18 @@ type JoinedTransactionRow = {
 };
 
 const toDateString = (value: string | Date): string =>
-  value instanceof Date ? value.toISOString().slice(0, 10) : value;
+  TransactionDate.fromDateLike(value).format();
+
+const buildInNumberList = (
+  column:
+    | typeof transactionCategories.transactionId
+    | typeof transactionCategories.categoryId,
+  values: number[],
+): ReturnType<typeof sql> =>
+  sql`${column} in (${sql.join(
+    values.map((v) => sql`${v}`),
+    sql`, `,
+  )})`;
 
 @injectable()
 export class TransactionRepository implements ITransactionRepository {
@@ -123,6 +142,122 @@ export class TransactionRepository implements ITransactionRepository {
     return await this.selectJoinedTransactions(
       sql`${transactions.userId} = ${userId} and ${transactions.deletedAt} is null and ${transactions.date} >= ${startDate} and ${transactions.date} <= ${endDate}`,
     );
+  }
+
+  async listByUserId(
+    query: ListTransactionsQuery,
+  ): Promise<ListTransactionsResult> {
+    const baseConditions = [
+      sql`${transactions.userId} = ${query.userId}`,
+      sql`${transactions.deletedAt} is null`,
+    ];
+
+    const dateConditions = [
+      query.startDate ? sql`${transactions.date} >= ${query.startDate}` : null,
+      query.endDate ? sql`${transactions.date} <= ${query.endDate}` : null,
+    ].filter((v): v is ReturnType<typeof sql> => v !== null);
+
+    const whereForTransactions = and(...baseConditions, ...dateConditions);
+
+    const typeCondition =
+      query.type !== undefined
+        ? sql`${transactionTypes.code} = ${query.type}`
+        : null;
+
+    const categoryCondition =
+      query.categoryIds !== undefined && query.categoryIds.length > 0
+        ? sql`exists (
+					select 1
+					from ${transactionCategories}
+					where ${transactionCategories.transactionId} = ${transactions.id}
+						and ${buildInNumberList(transactionCategories.categoryId, query.categoryIds)}
+				)`
+        : null;
+
+    const whereClause = and(
+      whereForTransactions,
+      ...(typeCondition ? [typeCondition] : []),
+      ...(categoryCondition ? [categoryCondition] : []),
+    );
+
+    const [{ total }] = await this.db
+      .select({
+        total: count(),
+      })
+      .from(transactions)
+      .innerJoin(transactionTypes, eq(transactions.typeId, transactionTypes.id))
+      .where(whereClause);
+
+    const totalCount = Number(total ?? 0);
+
+    const rows: {
+      transaction: typeof transactions.$inferSelect;
+      transactionType: typeof transactionTypes.$inferSelect;
+      currency: typeof currencies.$inferSelect;
+    }[] = await this.db
+      .select({
+        transaction: transactions,
+        transactionType: transactionTypes,
+        currency: currencies,
+      })
+      .from(transactions)
+      .innerJoin(transactionTypes, eq(transactions.typeId, transactionTypes.id))
+      .innerJoin(currencies, eq(transactions.currencyId, currencies.id))
+      .where(whereClause)
+      .orderBy(
+        ({ asc, desc } as const)[query.order](transactions.date),
+        ({ asc, desc } as const)[query.order](transactions.id),
+      )
+      .limit(query.limit)
+      .offset(query.offset);
+
+    const transactionIds = rows.map((r) => r.transaction.id);
+
+    if (transactionIds.length === 0) {
+      return {
+        items: [],
+        total: totalCount,
+      };
+    }
+
+    const categoryRows: {
+      transactionId: number;
+      categoryId: number;
+    }[] = await this.db
+      .select({
+        transactionId: transactionCategories.transactionId,
+        categoryId: transactionCategories.categoryId,
+      })
+      .from(transactionCategories)
+      .where(
+        buildInNumberList(transactionCategories.transactionId, transactionIds),
+      )
+      .orderBy(asc(transactionCategories.id));
+
+    const categoryIdsByTransactionId = categoryRows.reduce((map, row) => {
+      const current = map.get(row.transactionId) ?? [];
+      map.set(row.transactionId, [...current, row.categoryId]);
+      return map;
+    }, new Map<number, number[]>());
+
+    const items: TransactionListItemRecord[] = rows.map((row) => ({
+      id: row.transaction.id,
+      userId: row.transaction.userId,
+      type: toTransactionType(row.transactionType.code),
+      title: row.transaction.title,
+      amount: row.transaction.amount,
+      currencyCode: row.currency.code,
+      date: toDateString(row.transaction.date),
+      categoryIds: categoryIdsByTransactionId.get(row.transaction.id) ?? [],
+      memo: row.transaction.memo,
+      createdAt: row.transaction.createdAt,
+      updatedAt: row.transaction.updatedAt,
+    }));
+
+    return {
+      items,
+      total: totalCount,
+    };
   }
 
   async update(transaction: Transaction): Promise<TransactionRecord> {

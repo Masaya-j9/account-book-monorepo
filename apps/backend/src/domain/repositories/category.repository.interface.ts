@@ -53,6 +53,11 @@ export interface ICategoryRepository {
   findByUserId(userId: number): Promise<CategoryRecord[]>;
 
   /**
+   * ID一覧でカテゴリを取得する（ユーザーが利用可能なものに限定）
+   */
+  findByIds(userId: number, ids: number[]): Promise<CategoryRecord[]>;
+
+  /**
    * ページネーション付きでカテゴリ一覧を取得する
    */
   findAllWithPagination(
