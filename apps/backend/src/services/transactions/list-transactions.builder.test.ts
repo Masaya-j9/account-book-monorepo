@@ -121,6 +121,25 @@ describe('ListTransactionsBuilder（取引一覧DTO組み立て）', () => {
       expect(output.pagination.hasNext).toBe(false);
       expect(output.pagination.hasPrev).toBe(false);
     });
+
+    it('page === totalPages の場合（最終ページ）は hasNext=false になる', () => {
+      const builder = new ListTransactionsBuilder();
+
+      const output = builder.build({
+        input: {
+          userId: 1,
+          order: 'desc',
+          page: 3,
+          limit: 20,
+        },
+        result: makeResult([makeItem({ id: 1 })], 41),
+        categoriesById: new Map(),
+      });
+
+      expect(output.pagination.totalPages).toBe(3);
+      expect(output.pagination.hasNext).toBe(false);
+      expect(output.pagination.hasPrev).toBe(true);
+    });
   });
 
   describe('異常系', () => {
