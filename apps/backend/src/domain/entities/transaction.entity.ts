@@ -290,6 +290,27 @@ export type TransactionRecord = {
   updatedAt: Date;
 };
 
+export type TransactionCategoryRecord = {
+  id: number;
+  name: string;
+  type: 'INCOME' | 'EXPENSE';
+  isDefault: boolean;
+};
+
+export type TransactionListItemRecord = {
+  id: number;
+  userId: number;
+  type: 'INCOME' | 'EXPENSE';
+  title: string;
+  amount: number;
+  currencyCode: string;
+  date: string; // YYYY-MM-DD
+  categoryIds: number[];
+  memo: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type CreateTransactionData = {
   userId: number;
   type: 'INCOME' | 'EXPENSE';
