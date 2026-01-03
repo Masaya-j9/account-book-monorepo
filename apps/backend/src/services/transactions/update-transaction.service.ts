@@ -393,25 +393,30 @@ export class UpdateTransactionUseCase {
             value.current.updatedAt,
           );
 
-          const operations: ReadonlyArray<(t: Transaction) => void> = [
+          const operations = [
             primaryCategoryId !== value.current.categoryId
-              ? (t) => t.updateCategory(primaryCategoryId)
-              : () => {},
+              ? (t: Transaction) => t.updateCategory(primaryCategoryId)
+              : null,
             value.title !== undefined
-              ? (t) => t.updateTitle(nextTitle)
-              : () => {},
+              ? (t: Transaction) => t.updateTitle(nextTitle)
+              : null,
             value.amount !== undefined
-              ? (t) => t.updateAmount(money)
-              : () => {},
-            value.date !== undefined ? (t) => t.updateDate(date) : () => {},
-            value.memo !== undefined ? (t) => t.updateMemo(nextMemo) : () => {},
-          ];
+              ? (t: Transaction) => t.updateAmount(money)
+              : null,
+            value.date !== undefined
+              ? (t: Transaction) => t.updateDate(date)
+              : null,
+            value.memo !== undefined
+              ? (t: Transaction) => t.updateMemo(nextMemo)
+              : null,
+          ] as const;
 
-          operations.forEach((op) => {
-            op(transaction);
-          });
-
-          return transaction;
+          return operations
+            .filter((op): op is (t: Transaction) => void => op !== null)
+            .reduce((t, op) => {
+              op(t);
+              return t;
+            }, transaction);
         },
         catch: (cause) =>
           this.createUnexpectedError('取引の更新に失敗しました', cause),
