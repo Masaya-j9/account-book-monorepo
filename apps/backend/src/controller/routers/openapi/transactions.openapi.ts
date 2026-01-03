@@ -26,13 +26,13 @@ import {
 import type { CreateTransactionUseCase } from '../../../services/transactions/create-transaction.service';
 import { InvalidPaginationError } from '../../../services/transactions/list-transactions.errors';
 import type { ListTransactionsUseCase } from '../../../services/transactions/list-transactions.service';
-import type { UpdateTransactionUseCase } from '../../../services/transactions/update-transaction.service';
 import {
   CategoriesNotFoundError,
   InvalidCategoryIdsError,
   NotOwnerError,
   TransactionNotFoundError,
 } from '../../../services/transactions/update-transaction.errors';
+import type { UpdateTransactionUseCase } from '../../../services/transactions/update-transaction.service';
 
 const resolveCreateTransactionUseCase = (db: NodePgDatabase) => {
   const container = createRequestContainer(db);
