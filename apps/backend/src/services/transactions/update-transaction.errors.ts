@@ -1,4 +1,14 @@
 import { DomainError } from '../../domain/values/domain-error';
+import type {
+  CategoryTypeMismatchError,
+  FutureTransactionDateError,
+  InvalidAmountError,
+  InvalidDateFormatError,
+  InvalidTransactionTypeError,
+  TransactionMemoTooLongError,
+  TransactionTitleRequiredError,
+  TransactionTitleTooLongError,
+} from './create-transaction.errors';
 
 export class TransactionNotFoundError extends DomainError {
   constructor(id: number) {
@@ -51,4 +61,12 @@ export type UpdateTransactionError =
   | NotOwnerError
   | InvalidCategoryIdsError
   | CategoriesNotFoundError
+  | CategoryTypeMismatchError
+  | FutureTransactionDateError
+  | InvalidAmountError
+  | InvalidDateFormatError
+  | InvalidTransactionTypeError
+  | TransactionMemoTooLongError
+  | TransactionTitleRequiredError
+  | TransactionTitleTooLongError
   | UnexpectedUpdateTransactionError;
