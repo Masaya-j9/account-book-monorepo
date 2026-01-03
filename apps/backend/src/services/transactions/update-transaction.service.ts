@@ -393,7 +393,7 @@ export class UpdateTransactionUseCase {
             value.current.updatedAt,
           );
 
-          const operations = [
+          const operations: ReadonlyArray<((t: Transaction) => void) | null> = [
             primaryCategoryId !== value.current.categoryId
               ? (t: Transaction) => t.updateCategory(primaryCategoryId)
               : null,
@@ -409,14 +409,16 @@ export class UpdateTransactionUseCase {
             value.memo !== undefined
               ? (t: Transaction) => t.updateMemo(nextMemo)
               : null,
-          ] as const;
+          ];
 
-          return operations
-            .filter((op): op is (t: Transaction) => void => op !== null)
-            .reduce((t, op) => {
-              op(t);
-              return t;
-            }, transaction);
+          const isOperation = (
+            op: ((t: Transaction) => void) | null,
+          ): op is (t: Transaction) => void => op !== null;
+
+          return operations.filter(isOperation).reduce((t, op) => {
+            op(t);
+            return t;
+          }, transaction);
         },
         catch: (cause) =>
           this.createUnexpectedError('取引の更新に失敗しました', cause),
