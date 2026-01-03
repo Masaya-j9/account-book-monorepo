@@ -10,6 +10,7 @@ import { ListCategoriesUseCase } from '../../services/categories/list-categories
 import { UpdateCategoryUseCase } from '../../services/categories/update-category.service';
 import { CreateTransactionUseCase } from '../../services/transactions/create-transaction.service';
 import { ListTransactionsUseCase } from '../../services/transactions/list-transactions.service';
+import { UpdateTransactionUseCase } from '../../services/transactions/update-transaction.service';
 import { CategoryRepository } from '../repositories/category.repository';
 import { TransactionRepository } from '../repositories/transaction.repository';
 import { TOKENS } from './tokens';
@@ -50,6 +51,10 @@ export const createRequestContainer = (db: NodePgDatabase) => {
   container
     .bind<ListTransactionsUseCase>(TOKENS.ListTransactionsUseCase)
     .to(ListTransactionsUseCase);
+
+  container
+    .bind<UpdateTransactionUseCase>(TOKENS.UpdateTransactionUseCase)
+    .to(UpdateTransactionUseCase);
 
   return container;
 };
