@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import type { CategoryRecord } from '../../domain/entities/category.entity';
 import type {
   CreateTransactionData,
-  Transaction,
   TransactionListItemRecord,
   TransactionRecord,
 } from '../../domain/entities/transaction.entity';
@@ -80,6 +79,12 @@ describe('ListTransactionsUseCase（取引一覧取得）', () => {
       throw new Error('not used');
     };
 
+    const notUsedFindCategoryIdsByTransactionId = async (
+      _transactionId: number,
+    ): Promise<number[]> => {
+      throw new Error('not used');
+    };
+
     const notUsedFindByUserId = async (
       _userId: number,
     ): Promise<TransactionRecord[]> => {
@@ -94,8 +99,9 @@ describe('ListTransactionsUseCase（取引一覧取得）', () => {
       throw new Error('not used');
     };
 
-    const notUsedUpdate = async (
-      _transaction: Transaction,
+    const notUsedUpdate: ITransactionRepository['update'] = async (
+      _transaction,
+      _options,
     ): Promise<TransactionRecord> => {
       throw new Error('not used');
     };
@@ -113,6 +119,7 @@ describe('ListTransactionsUseCase（取引一覧取得）', () => {
     return {
       create: notUsedCreate,
       findById: notUsedFindById,
+      findCategoryIdsByTransactionId: notUsedFindCategoryIdsByTransactionId,
       findByUserId: notUsedFindByUserId,
       findByUserIdAndPeriod: notUsedFindByUserIdAndPeriod,
       listByUserId: params.listByUserIdImpl,
