@@ -36,6 +36,11 @@ export interface ITransactionRepository {
   findById(id: number): Promise<TransactionRecord | null>;
 
   /**
+   * 取引に紐づくカテゴリID一覧を取得する
+   */
+  findCategoryIdsByTransactionId(transactionId: number): Promise<number[]>;
+
+  /**
    * ユーザーIDで取引一覧を取得する
    */
   findByUserId(userId: number): Promise<TransactionRecord[]>;
@@ -57,7 +62,10 @@ export interface ITransactionRepository {
   /**
    * 取引を更新する
    */
-  update(transaction: Transaction): Promise<TransactionRecord>;
+  update(
+    transaction: Transaction,
+    options?: { categoryIds?: number[] },
+  ): Promise<TransactionRecord>;
 
   /**
    * 取引を削除する

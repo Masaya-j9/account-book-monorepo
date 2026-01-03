@@ -128,6 +128,24 @@ export class TransactionRepository implements ITransactionRepository {
     return results.length === 0 ? null : results[0];
   }
 
+  async findCategoryIdsByTransactionId(
+    transactionId: number,
+  ): Promise<number[]> {
+    const rows: { categoryId: number }[] = await this.db
+      .select({ categoryId: transactionCategories.categoryId })
+      .from(transactionCategories)
+      .innerJoin(
+        transactions,
+        eq(transactionCategories.transactionId, transactions.id),
+      )
+      .where(
+        sql`${transactionCategories.transactionId} = ${transactionId} and ${transactions.deletedAt} is null`,
+      )
+      .orderBy(asc(transactionCategories.id));
+
+    return rows.map((r) => r.categoryId);
+  }
+
   async findByUserId(userId: number): Promise<TransactionRecord[]> {
     return await this.selectJoinedTransactions(
       sql`${transactions.userId} = ${userId} and ${transactions.deletedAt} is null`,
@@ -263,7 +281,10 @@ export class TransactionRepository implements ITransactionRepository {
     };
   }
 
-  async update(transaction: Transaction): Promise<TransactionRecord> {
+  async update(
+    transaction: Transaction,
+    options?: { categoryIds?: number[] },
+  ): Promise<TransactionRecord> {
     return await this.db.transaction(async (tx) => {
       const [currency] = await tx
         .select()
@@ -299,16 +320,51 @@ export class TransactionRepository implements ITransactionRepository {
         .where(eq(transactions.id, transaction.id))
         .returning();
 
-      const results = await this.selectJoinedTransactions(
-        sql`${transactions.id} = ${updated.id} and ${transactions.deletedAt} is null`,
-        tx,
-      );
+      if (options?.categoryIds !== undefined) {
+        await tx
+          .delete(transactionCategories)
+          .where(eq(transactionCategories.transactionId, updated.id));
 
-      if (results.length === 0) {
-        throw new Error(`Transaction ${updated.id} not found`);
+        if (options.categoryIds.length > 0) {
+          await tx.insert(transactionCategories).values(
+            options.categoryIds.map((categoryId) => ({
+              transactionId: updated.id,
+              categoryId,
+            })),
+          );
+        }
       }
 
-      return results[0];
+      const categoryIds =
+        options?.categoryIds !== undefined
+          ? options.categoryIds
+          : (
+              await tx
+                .select({ categoryId: transactionCategories.categoryId })
+                .from(transactionCategories)
+                .where(eq(transactionCategories.transactionId, updated.id))
+                .orderBy(asc(transactionCategories.id))
+            ).map((r) => r.categoryId);
+
+      const primaryCategoryId = categoryIds[0];
+
+      if (primaryCategoryId === undefined) {
+        throw new Error(`Transaction ${updated.id} has no category`);
+      }
+
+      return {
+        id: updated.id,
+        userId: updated.userId,
+        type: toTransactionType(type.code),
+        title: updated.title,
+        amount: updated.amount,
+        currency: currency.code,
+        date: toDateString(updated.date),
+        categoryId: primaryCategoryId,
+        memo: updated.memo ?? '',
+        createdAt: updated.createdAt,
+        updatedAt: updated.updatedAt,
+      };
     });
   }
 
