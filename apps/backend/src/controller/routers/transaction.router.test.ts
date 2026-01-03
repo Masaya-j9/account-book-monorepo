@@ -6,12 +6,19 @@ import type { TransactionRecord } from '../../domain/entities/transaction.entity
 import { TOKENS } from '../../infrastructre/di/tokens';
 import {
   CategoryNotFoundError,
+  CategoryTypeMismatchError,
   InvalidAmountError,
   InvalidDateFormatError,
   InvalidTransactionTypeError,
   TransactionTitleRequiredError,
 } from '../../services/transactions/create-transaction.errors';
 import { InvalidPaginationError } from '../../services/transactions/list-transactions.errors';
+import {
+  CategoriesNotFoundError,
+  InvalidCategoryIdsError,
+  NotOwnerError,
+  TransactionNotFoundError,
+} from '../../services/transactions/update-transaction.errors';
 
 const { createRequestContainerMock, executeMock, getMock } = vi.hoisted(() => {
   const execute = vi.fn();
@@ -211,6 +218,14 @@ describe('transactionRouter（取引ルーター）', () => {
       ).rejects.toMatchObject({
         code: 'UNAUTHORIZED',
       });
+
+      await expect(
+        caller.update({
+          id: 1,
+        }),
+      ).rejects.toMatchObject({
+        code: 'UNAUTHORIZED',
+      });
     });
 
     it('入力スキーマに違反する場合は usecase が呼ばれない', async () => {
@@ -231,6 +246,13 @@ describe('transactionRouter（取引ルーター）', () => {
         caller.list({
           page: 0,
           limit: 20,
+        }),
+      ).rejects.toBeInstanceOf(TRPCError);
+      expect(executeMock).not.toHaveBeenCalled();
+
+      await expect(
+        caller.update({
+          id: 0,
         }),
       ).rejects.toBeInstanceOf(TRPCError);
       expect(executeMock).not.toHaveBeenCalled();
@@ -334,6 +356,24 @@ describe('transactionRouter（取引ルーター）', () => {
       });
     });
 
+    it('update の想定外例外は INTERNAL_SERVER_ERROR に変換される', async () => {
+      executeMock.mockRejectedValueOnce(new Error('boom'));
+
+      const caller = transactionRouter.createCaller({ db, userId: 1 });
+      const error = await caller
+        .update({
+          id: 1,
+          title: '更新タイトル',
+        })
+        .catch((e) => e);
+
+      expect(error).toBeInstanceOf(TRPCError);
+      expect(error).toMatchObject({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: '取引の更新に失敗しました',
+      });
+    });
+
     it('ページネーションの不正は BAD_REQUEST に変換される', async () => {
       executeMock.mockRejectedValueOnce(
         new InvalidPaginationError('page は1以上'),
@@ -366,6 +406,140 @@ describe('transactionRouter（取引ルーター）', () => {
       expect(error).toMatchObject({
         code: 'INTERNAL_SERVER_ERROR',
         message: '取引一覧の取得に失敗しました',
+      });
+    });
+  });
+
+  it('認証済みの場合、取引を更新できる', async () => {
+    executeMock.mockResolvedValueOnce({
+      transaction: {
+        id: 1,
+        userId: 1,
+        type: 'EXPENSE',
+        title: '更新タイトル',
+        amount: 1200,
+        currencyCode: 'JPY',
+        date: '2025-01-01',
+        categories: [
+          { id: 10, name: '食費', type: 'EXPENSE', isDefault: false },
+        ],
+        memo: null,
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+      },
+    });
+
+    const caller = transactionRouter.createCaller({ db, userId: 1 });
+    const result = await caller.update({
+      id: 1,
+      title: '更新タイトル',
+      categoryIds: [10],
+    });
+
+    expect(createRequestContainerMock).toHaveBeenCalledWith(db);
+    expect(getMock).toHaveBeenCalledWith(TOKENS.UpdateTransactionUseCase);
+    expect(executeMock).toHaveBeenCalledWith({
+      userId: 1,
+      id: 1,
+      type: undefined,
+      title: '更新タイトル',
+      amount: undefined,
+      date: undefined,
+      categoryIds: [10],
+      memo: undefined,
+    });
+
+    expect(result).toEqual({
+      transaction: {
+        id: 1,
+        userId: 1,
+        type: 'EXPENSE',
+        title: '更新タイトル',
+        amount: 1200,
+        currencyCode: 'JPY',
+        date: '2025-01-01',
+        categories: [
+          { id: 10, name: '食費', type: 'EXPENSE', isDefault: false },
+        ],
+        memo: null,
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+      },
+    });
+  });
+
+  describe('update（異常系）', () => {
+    it('取引が見つからない場合は NOT_FOUND に変換される', async () => {
+      executeMock.mockRejectedValueOnce(new TransactionNotFoundError(999));
+
+      const caller = transactionRouter.createCaller({ db, userId: 1 });
+
+      await expect(
+        caller.update({
+          id: 999,
+          title: '更新タイトル',
+        }),
+      ).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
+    });
+
+    it('権限がない場合は FORBIDDEN に変換される', async () => {
+      executeMock.mockRejectedValueOnce(new NotOwnerError());
+
+      const caller = transactionRouter.createCaller({ db, userId: 1 });
+
+      await expect(
+        caller.update({
+          id: 1,
+          title: '更新タイトル',
+        }),
+      ).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+    });
+
+    it('カテゴリが見つからない場合は NOT_FOUND に変換される', async () => {
+      executeMock.mockRejectedValueOnce(new CategoriesNotFoundError([999]));
+
+      const caller = transactionRouter.createCaller({ db, userId: 1 });
+
+      await expect(
+        caller.update({
+          id: 1,
+          categoryIds: [999],
+        }),
+      ).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
+    });
+
+    it('バリデーション系メッセージは BAD_REQUEST に変換される（カテゴリID/種別不一致）', async () => {
+      executeMock.mockRejectedValueOnce(new InvalidCategoryIdsError());
+
+      const caller = transactionRouter.createCaller({ db, userId: 1 });
+
+      await expect(
+        caller.update({
+          id: 1,
+          categoryIds: [10],
+        }),
+      ).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+      });
+
+      executeMock.mockRejectedValueOnce(
+        new CategoryTypeMismatchError('INCOME', 'EXPENSE'),
+      );
+
+      await expect(
+        caller.update({
+          id: 1,
+          type: 'INCOME',
+          categoryIds: [10],
+        }),
+      ).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
       });
     });
   });

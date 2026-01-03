@@ -45,3 +45,12 @@ export const transactionsListOutputSchema = z.object({
 export type TransactionsListOutput = z.infer<
   typeof transactionsListOutputSchema
 >;
+
+// transactions.update Output
+export const transactionsUpdateOutputSchema = z.object({
+  transaction: transactionApiSchema,
+});
+
+export type TransactionsUpdateOutput = z.infer<
+  typeof transactionsUpdateOutputSchema
+>;

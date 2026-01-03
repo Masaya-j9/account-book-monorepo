@@ -98,3 +98,38 @@ export const transactionsListInputSchema = z
   );
 
 export type TransactionsListInput = z.infer<typeof transactionsListInputSchema>;
+
+// transactions.update
+export const transactionsUpdateInputSchema = z.object({
+  id: z.number().int().positive(),
+  type: transactionTypeSchema.optional(),
+  title: z
+    .string()
+    .min(1, 'タイトルは必須です')
+    .max(
+      TRANSACTION_TITLE_MAX_LENGTH,
+      `タイトルは${TRANSACTION_TITLE_MAX_LENGTH}文字以内である必要があります`,
+    )
+    .optional(),
+  amount: z
+    .number()
+    .int()
+    .positive('金額は0より大きい必要があります')
+    .optional(),
+  date: z
+    .string()
+    .regex(TRANSACTION_DATE_REGEX, '日付はYYYY-MM-DD形式である必要があります')
+    .optional(),
+  categoryIds: z.array(z.number().int().positive()).optional(),
+  memo: z
+    .string()
+    .max(
+      TRANSACTION_MEMO_MAX_LENGTH,
+      `メモは${TRANSACTION_MEMO_MAX_LENGTH}文字以内である必要があります`,
+    )
+    .optional(),
+});
+
+export type TransactionsUpdateInput = z.infer<
+  typeof transactionsUpdateInputSchema
+>;

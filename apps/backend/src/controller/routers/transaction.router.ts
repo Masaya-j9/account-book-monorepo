@@ -7,6 +7,8 @@ import {
   transactionsCreateOutputSchema,
   transactionsListInputSchema,
   transactionsListOutputSchema,
+  transactionsUpdateInputSchema,
+  transactionsUpdateOutputSchema,
 } from '@account-book-app/shared';
 import { TRPCError } from '@trpc/server';
 
@@ -26,6 +28,13 @@ import {
 import type { CreateTransactionUseCase } from '../../services/transactions/create-transaction.service';
 import { InvalidPaginationError } from '../../services/transactions/list-transactions.errors';
 import type { ListTransactionsUseCase } from '../../services/transactions/list-transactions.service';
+import {
+  CategoriesNotFoundError,
+  InvalidCategoryIdsError,
+  NotOwnerError,
+  TransactionNotFoundError,
+} from '../../services/transactions/update-transaction.errors';
+import type { UpdateTransactionUseCase } from '../../services/transactions/update-transaction.service';
 import { protectedProcedure, router } from '../trpc/trpc';
 
 const resolveCreateTransactionUseCase = (db: NodePgDatabase) => {
@@ -38,6 +47,13 @@ const resolveCreateTransactionUseCase = (db: NodePgDatabase) => {
 const resolveListTransactionsUseCase = (db: NodePgDatabase) => {
   const container = createRequestContainer(db);
   return container.get<ListTransactionsUseCase>(TOKENS.ListTransactionsUseCase);
+};
+
+const resolveUpdateTransactionUseCase = (db: NodePgDatabase) => {
+  const container = createRequestContainer(db);
+  return container.get<UpdateTransactionUseCase>(
+    TOKENS.UpdateTransactionUseCase,
+  );
 };
 
 const toCreateTransactionTrpcError = <T>(cause: T) => {
@@ -96,6 +112,57 @@ const toListTransactionsTrpcError = <T>(cause: T) => {
   });
 };
 
+const toUpdateTransactionTrpcError = <T>(cause: T) => {
+  const error = cause instanceof Error ? cause : new Error(String(cause));
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('[transactions.update] error:', error);
+  }
+
+  if (
+    error instanceof InvalidTransactionTypeError ||
+    error instanceof TransactionTitleRequiredError ||
+    error instanceof TransactionTitleTooLongError ||
+    error instanceof InvalidAmountError ||
+    error instanceof InvalidDateFormatError ||
+    error instanceof FutureTransactionDateError ||
+    error instanceof TransactionMemoTooLongError ||
+    error instanceof CategoryTypeMismatchError ||
+    error instanceof InvalidCategoryIdsError
+  ) {
+    return new TRPCError({
+      code: 'BAD_REQUEST',
+      message: error.message,
+    });
+  }
+
+  if (error instanceof TransactionNotFoundError) {
+    return new TRPCError({
+      code: 'NOT_FOUND',
+      message: error.message,
+    });
+  }
+
+  if (error instanceof CategoriesNotFoundError) {
+    return new TRPCError({
+      code: 'NOT_FOUND',
+      message: error.message,
+    });
+  }
+
+  if (error instanceof NotOwnerError) {
+    return new TRPCError({
+      code: 'FORBIDDEN',
+      message: error.message,
+    });
+  }
+
+  return new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: '取引の更新に失敗しました',
+  });
+};
+
 export const transactionRouter = router({
   create: protectedProcedure
     .input(transactionsCreateInputSchema)
@@ -141,6 +208,29 @@ export const transactionRouter = router({
         });
       } catch (error) {
         throw toListTransactionsTrpcError(error);
+      }
+    }),
+
+  update: protectedProcedure
+    .input(transactionsUpdateInputSchema)
+    .output(transactionsUpdateOutputSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const updateTransactionUseCase = resolveUpdateTransactionUseCase(
+          ctx.db,
+        );
+        return await updateTransactionUseCase.execute({
+          userId: ctx.userId,
+          id: input.id,
+          type: input.type,
+          title: input.title,
+          amount: input.amount,
+          date: input.date,
+          categoryIds: input.categoryIds,
+          memo: input.memo,
+        });
+      } catch (error) {
+        throw toUpdateTransactionTrpcError(error);
       }
     }),
 });
