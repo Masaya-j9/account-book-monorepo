@@ -2,7 +2,7 @@
 
 ## プロジェクト構成
 
-このプロジェクトは **Turborepo** と **npm workspaces** を使用したモノレポ構成です。
+このプロジェクトは **Turborepo** と **pnpm workspaces** を使用したモノレポ構成です。
 
 ### ディレクトリ構造
 
@@ -57,19 +57,22 @@ account-book-app/
 ### モノレポツール
 
 - **Turborepo** - 高性能なビルドシステム
-- **npm workspaces** - パッケージ管理
+- **pnpm workspaces** - パッケージ管理
 
 ## 環境構築
 
 ### 依存関係のインストール
 
 ```shell
-npm install
+corepack enable
+pnpm install
 ```
 
-このコマンドにより、ルートと全てのワークスペース（`app/frontend`, `app/backend`, `packages/shared`, `packages/db`）の依存関係が一括でインストールされます。
+このコマンドにより、ルートと全てのワークスペース（`apps/frontend`, `apps/backend`, `packages/shared`, `packages/db`）の依存関係が一括でインストールされます。
 
-このプロジェクトでは Turborepo をローカル依存（devDependencies）として利用しているため、まず `npm install` を実行して `turbo` を使える状態にしてください。
+このプロジェクトでは Turborepo をローカル依存（devDependencies）として利用しているため、まず `pnpm install` を実行して `turbo` を使える状態にしてください。
+
+補足: Node.js に同梱されている Corepack を使うことで、ルートの `package.json` に指定した `packageManager`（pnpm のバージョン）を自動で利用できます。
 
 ### データベースのセットアップ
 
@@ -120,29 +123,29 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/account_book_app"
 
 ```shell
 # マイグレーションファイルの生成
-npm -w @account-book-app/db run db:generate
+pnpm --filter @account-book-app/db run db:generate
 
 # マイグレーションの適用
-npm -w @account-book-app/db run db:migrate
+pnpm --filter @account-book-app/db run db:migrate
 
 # Drizzle Studio の起動（GUI でデータベースを確認）
-npm -w @account-book-app/db run db:studio
+pnpm --filter @account-book-app/db run db:studio
 ```
 
 ### サーバーの起動
 
 ```shell
 # すべてのアプリケーションを並列起動
-npm run dev
+pnpm run dev
 
 # フロントエンドのみ起動
-npm run dev --filter=frontend
+pnpm run dev --filter=frontend
 
 # バックエンドのみ起動（推奨）
-npm run dev:backend
+pnpm run dev:backend
 
 # turbo の filter を直接使う場合
-npx turbo run dev --filter=backend
+pnpm exec turbo run dev --filter=backend
 ```
 
 起動後のアクセス先：
@@ -160,22 +163,22 @@ curl -sS http://localhost:4000/
 
 ```shell
 # すべてのアプリケーションをビルド
-npm run build
+pnpm run build
 
 # turbo コマンドが見つからない場合（PATHに無い場合）は npx 経由でも実行できます
-npx turbo run build
+pnpm exec turbo run build
 
 # 特定のアプリケーションのみビルド
-npm run build --filter=frontend
+pnpm run build --filter=frontend
 
 # バックエンドのみビルド（推奨）
-npm run build:backend
+pnpm run build:backend
 ```
 
 バックエンドのみを「ビルド→起動」する場合：
 
 ```shell
-npm run start:backend
+pnpm run start:backend
 ```
 
 ビルドの考え方：
@@ -191,13 +194,13 @@ Biome を使用してコードの品質チェックを行います。
 
 ```shell
 # すべてのワークスペースでリントを並列実行
-npm run lint
+pnpm run lint
 
 # フロントエンドのみリント
-npm run lint --filter=frontend
+pnpm run lint --filter=frontend
 
 # バックエンドのみリント
-npm run lint:backend
+pnpm run lint:backend
 ```
 
 ### フォーマット（Format）
@@ -206,13 +209,13 @@ Biome を使用してコードを自動フォーマットします。
 
 ```shell
 # すべてのワークスペースでフォーマットを並列実行
-npm run format
+pnpm run format
 
 # フロントエンドのみフォーマット
-npm run format --filter=frontend
+pnpm run format --filter=frontend
 
 # バックエンドのみフォーマット
-npm run format:backend
+pnpm run format:backend
 ```
 
 ### テスト（Test）
@@ -221,19 +224,19 @@ Vitest を使用してユニットテストを実行します。
 
 ```shell
 # すべてのワークスペースでテストを並列実行（ワッチモード）
-npm test
+pnpm test
 
 # すべてのワークスペースでテストを一度だけ実行（CI/CD向け）
-npm run test:run
+pnpm run test:run
 
 # すべてのワークスペースでテストをUIモードで実行（ブラウザで結果確認）
-npm run test:ui
+pnpm run test:ui
 
 # フロントエンドのみテスト
-npm test --filter=frontend
+pnpm test --filter=frontend
 
 # バックエンドのみテスト
-npm test --filter=backend
+pnpm test --filter=backend
 ```
 
 #### テストファイルの命名規則
@@ -258,16 +261,16 @@ src/
 
 ```shell
 # 1. コードをフォーマット
-npm run format
+pnpm run format
 
 # 2. リントでエラーチェック
-npm run lint
+pnpm run lint
 
 # 3. テストを実行
-npm run test:run
+pnpm run test:run
 
 # 4. ビルドして型チェック
-npm run build
+pnpm run build
 ```
 
 ## 共有パッケージの使用方法
@@ -328,10 +331,10 @@ await db.delete(users).where(eq(users.id, 1));
 
 - **並列実行**:
 
-  - `npm run dev` - フロントエンドとバックエンドが同時に起動
-  - `npm run lint` - すべてのワークスペースで並列にリント実行
-  - `npm run format` - すべてのワークスペースで並列にフォーマット実行
-  - `npm run test:run` - すべてのワークスペースで並列にテスト実行
+  - `pnpm run dev` - フロントエンドとバックエンドが同時に起動
+  - `pnpm run lint` - すべてのワークスペースで並列にリント実行
+  - `pnpm run format` - すべてのワークスペースで並列にフォーマット実行
+  - `pnpm run test:run` - すべてのワークスペースで並列にテスト実行
   - 複数のタスクを効率的に実行し、開発時間を短縮
 
 - **キャッシュ機能**:
@@ -349,28 +352,28 @@ await db.delete(users).where(eq(users.id, 1));
 
 ```shell
 # 単一ワークスペース
-npm run dev --filter=frontend
-npm run lint --filter=backend
+pnpm run dev --filter=frontend
+pnpm run lint --filter=backend
 
 # 複数ワークスペース
-npm run build --filter=frontend --filter=backend
+pnpm run build --filter=frontend --filter=backend
 
 # パターンマッチング
-npm run lint --filter=apps/*
+pnpm run lint --filter=apps/*
 ```
 
 ### 便利なコマンド組み合わせ
 
 ```shell
 # 開発開始時（すべてのサーバーを起動）
-npm run dev
+pnpm run dev
 
 # コミット前（フォーマット→リント→テスト→ビルド）
-npm run format && npm run lint && npm run test:run && npm run build
+pnpm run format && pnpm run lint && pnpm run test:run && pnpm run build
 
 # 特定のアプリのみ再起動
-npm run dev --filter=backend
+pnpm run dev --filter=backend
 
 # テストをウォッチモードで実行しながら開発
-npm test  # 別ターミナルで実行
+pnpm test  # 別ターミナルで実行
 ```

@@ -13,7 +13,7 @@
     "format": "biome format --write"
   },
   "dependencies": {
-    "@account-book-app/shared": "file:../../packages/shared",
+    "@account-book-app/shared": "workspace:*",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "next": "15.5.4"

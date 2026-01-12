@@ -4,10 +4,11 @@
 
 ```shell
 # repo root
-npm install
+corepack enable
+pnpm install
 
 # backend だけ起動
-npm run dev --filter=backend
+pnpm run dev --filter=backend
 ```
 
 起動後:
@@ -18,8 +19,8 @@ npm run dev --filter=backend
 
 ```shell
 # repo root
-npm run build --filter=backend
+pnpm run build --filter=backend
 
 # build 後に起動（backend ワークスペースで実行）
-npm -w backend run start
+pnpm --filter backend run start
 ```
