@@ -40,10 +40,10 @@ importers:
   apps/backend:
     dependencies:
       '@account-book-app/db':
-        specifier: file:../../packages/db
+        specifier: workspace:*
         version: link:../../packages/db
       '@account-book-app/shared':
-        specifier: file:../../packages/shared
+        specifier: workspace:*
         version: link:../../packages/shared
       '@hono/node-server':
         specifier: ^1.19.5
@@ -98,7 +98,7 @@ importers:
   apps/frontend:
     dependencies:
       '@account-book-app/shared':
-        specifier: file:../../packages/shared
+        specifier: workspace:*
         version: link:../../packages/shared
       next:
         specifier: 15.5.4

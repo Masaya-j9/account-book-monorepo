@@ -14,8 +14,8 @@
     "lint:ci": "biome ci ."
   },
   "dependencies": {
-    "@account-book-app/db": "file:../../packages/db",
-    "@account-book-app/shared": "file:../../packages/shared",
+    "@account-book-app/db": "workspace:*",
+    "@account-book-app/shared": "workspace:*",
     "@hono/node-server": "^1.19.5",
     "@hono/swagger-ui": "^0.5.3",
     "@hono/trpc-server": "^0.4.0",
