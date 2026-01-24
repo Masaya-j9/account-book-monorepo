@@ -85,6 +85,7 @@ applyTo: "apps/backend/**"
 - router（プレゼンテーション層）にバリデーションロジック（条件分岐やメッセージ判定）を書かない
 - 入出力のバリデーションは `packages/shared` の Zod スキーマ（`.input(...)` / `.output(...)`）に責務を寄せる
 - ビジネスロジックの失敗はユースケースで表現し、Result 型（Effect/TaggedError などの型付きエラー）として返す／throw する
+- router（プレゼンテーション層）でも Effect-TS を使って実装する（`try/catch` は使わない）
 
 ### 命名規則
 
