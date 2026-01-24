@@ -12,7 +12,6 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute, z } from '@hono/zod-openapi';
 
 import { createRequestContainer } from '../../../infrastructre/di/container';
-import { TOKENS } from '../../../infrastructre/di/tokens';
 import type { CreateCategoryUseCase } from '../../../services/categories/create.category.service';
 import {
   DuplicateCategoryError,
@@ -34,6 +33,7 @@ import {
   CategoryNotFoundError as UpdateCategoryNotFoundError,
 } from '../../../services/categories/update-category.errors';
 import type { UpdateCategoryUseCase } from '../../../services/categories/update-category.service';
+import { TOKENS } from '../../../services/di/tokens';
 
 const resolveCreateCategoryUseCase = (db: NodePgDatabase) => {
   const container = createRequestContainer(db);

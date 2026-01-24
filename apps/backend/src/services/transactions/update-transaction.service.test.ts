@@ -6,7 +6,7 @@ import type { TransactionRecord } from '../../domain/entities/transaction.entity
 import { Transaction } from '../../domain/entities/transaction.entity';
 import type { ICategoryRepository } from '../../domain/repositories/category.repository.interface';
 import type { ITransactionRepository } from '../../domain/repositories/transaction.repository.interface';
-import { TOKENS } from '../../infrastructre/di/tokens';
+import { TOKENS } from '../di/tokens';
 import {
   CategoryTypeMismatchError,
   FutureTransactionDateError,

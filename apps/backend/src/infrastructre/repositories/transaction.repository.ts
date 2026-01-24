@@ -25,7 +25,7 @@ import type {
   ListTransactionsResult,
 } from '../../domain/repositories/transaction.repository.interface';
 import { TransactionDate } from '../../domain/values/transaction-date';
-import { TOKENS } from '../di/tokens';
+import { TOKENS } from '../../services/di/tokens';
 
 const DEFAULT_CURRENCY_CODE = 'JPY' as const;
 

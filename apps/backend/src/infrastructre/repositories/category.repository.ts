@@ -25,7 +25,7 @@ import type {
   PaginatedResult,
   UpdateCategoryData,
 } from '../../domain/repositories/category.repository.interface';
-import { TOKENS } from '../di/tokens';
+import { TOKENS } from '../../services/di/tokens';
 
 // displayOrderが未設定の場合のデフォルト値
 const DEFAULT_DISPLAY_ORDER = 0;

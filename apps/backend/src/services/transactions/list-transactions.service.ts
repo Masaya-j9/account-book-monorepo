@@ -16,8 +16,8 @@ import {
   PaginationDomainError,
 } from '../../domain/values/pagination';
 import { TransactionListOrder } from '../../domain/values/transaction-list-order';
-import { TOKENS } from '../../infrastructre/di/tokens';
 import { Effect, pipe } from '../../shared/result';
+import { TOKENS } from '../di/tokens';
 import {
   ListTransactionsBuilder,
   type ListTransactionsInput,

@@ -6,7 +6,7 @@ import type {
   CreateCategoryData,
 } from '../../domain/entities/category.entity';
 import type { ICategoryRepository } from '../../domain/repositories/category.repository.interface';
-import { TOKENS } from '../../infrastructre/di/tokens';
+import { TOKENS } from '../di/tokens';
 import { CreateCategoryUseCase } from './create.category.service';
 import {
   DuplicateCategoryError,

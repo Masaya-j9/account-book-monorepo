@@ -13,7 +13,7 @@ import {
 import { TRPCError } from '@trpc/server';
 
 import { createRequestContainer } from '../../infrastructre/di/container';
-import { TOKENS } from '../../infrastructre/di/tokens';
+import { TOKENS } from '../../services/di/tokens';
 import {
   CategoryNotFoundError,
   CategoryTypeMismatchError,

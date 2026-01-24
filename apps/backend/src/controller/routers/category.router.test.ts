@@ -3,12 +3,12 @@ import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CategoryRecord } from '../../domain/entities/category.entity';
-import { TOKENS } from '../../infrastructre/di/tokens';
 import {
   DuplicateCategoryError,
   InvalidCategoryNameError,
   TransactionTypeNotFoundError,
 } from '../../services/categories/create-category.errors';
+import { TOKENS } from '../../services/di/tokens';
 
 const { createRequestContainerMock, executeMock, getMock } = vi.hoisted(() => {
   const execute = vi.fn();

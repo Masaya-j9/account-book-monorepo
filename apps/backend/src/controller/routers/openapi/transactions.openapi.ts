@@ -11,7 +11,7 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute, z } from '@hono/zod-openapi';
 
 import { createRequestContainer } from '../../../infrastructre/di/container';
-import { TOKENS } from '../../../infrastructre/di/tokens';
+import { TOKENS } from '../../../services/di/tokens';
 import {
   CategoryNotFoundError,
   CategoryTypeMismatchError,

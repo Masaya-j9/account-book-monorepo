@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TransactionRecord } from '../../domain/entities/transaction.entity';
-import { TOKENS } from '../../infrastructre/di/tokens';
+import { TOKENS } from '../../services/di/tokens';
 import {
   CategoryNotFoundError,
   CategoryTypeMismatchError,

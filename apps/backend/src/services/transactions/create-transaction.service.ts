@@ -14,8 +14,8 @@ import type { ICategoryRepository } from '../../domain/repositories/category.rep
 import type { ITransactionRepository } from '../../domain/repositories/transaction.repository.interface';
 import { Money } from '../../domain/values/money';
 import { TransactionDate } from '../../domain/values/transaction-date';
-import { TOKENS } from '../../infrastructre/di/tokens';
 import { Effect, pipe } from '../../shared/result';
+import { TOKENS } from '../di/tokens';
 import {
   CategoryNotFoundError,
   CategoryTypeMismatchError,

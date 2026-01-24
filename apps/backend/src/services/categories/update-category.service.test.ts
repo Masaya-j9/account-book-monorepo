@@ -6,7 +6,7 @@ import type {
   ICategoryRepository,
   UpdateCategoryData,
 } from '../../domain/repositories/category.repository.interface';
-import { TOKENS } from '../../infrastructre/di/tokens';
+import { TOKENS } from '../di/tokens';
 import {
   CategoryNotFoundError,
   DefaultCategoryUpdateForbiddenError,

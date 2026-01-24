@@ -10,8 +10,8 @@ import type {
   FindAllOptions,
   ICategoryRepository,
 } from '../../domain/repositories/category.repository.interface';
-import { TOKENS } from '../../infrastructre/di/tokens';
 import { Effect, pipe } from '../../shared/result';
+import { TOKENS } from '../di/tokens';
 import {
   InvalidPaginationError,
   InvalidSortParameterError,

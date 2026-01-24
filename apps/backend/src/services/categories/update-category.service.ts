@@ -11,8 +11,8 @@ import type {
   UpdateCategoryData,
 } from '../../domain/repositories/category.repository.interface';
 import { CategoryName } from '../../domain/values/category-name';
-import { TOKENS } from '../../infrastructre/di/tokens';
 import { Effect, Either, pipe } from '../../shared/result';
+import { TOKENS } from '../di/tokens';
 import {
   CategoryNotFoundError,
   DefaultCategoryUpdateForbiddenError,

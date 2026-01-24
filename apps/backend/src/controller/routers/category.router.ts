@@ -14,7 +14,6 @@ import {
 } from '@account-book-app/shared';
 import { TRPCError } from '@trpc/server';
 import { createRequestContainer } from '../../infrastructre/di/container';
-import { TOKENS } from '../../infrastructre/di/tokens';
 import type { CreateCategoryUseCase } from '../../services/categories/create.category.service';
 import {
   DuplicateCategoryError,
@@ -36,6 +35,7 @@ import {
   CategoryNotFoundError as UpdateCategoryNotFoundError,
 } from '../../services/categories/update-category.errors';
 import type { UpdateCategoryUseCase } from '../../services/categories/update-category.service';
+import { TOKENS } from '../../services/di/tokens';
 import { protectedProcedure, router } from '../trpc/trpc';
 
 const resolveCreateCategoryUseCase = (db: NodePgDatabase) => {
