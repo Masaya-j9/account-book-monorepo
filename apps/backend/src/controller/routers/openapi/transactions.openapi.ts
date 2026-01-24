@@ -9,6 +9,7 @@ import {
 } from '@account-book-app/shared';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute, z } from '@hono/zod-openapi';
+import type { Context, Env } from 'hono';
 
 import { createRequestContainer } from '../../../infrastructre/di/container';
 import { TOKENS } from '../../../services/di/tokens';
@@ -33,6 +34,7 @@ import {
   TransactionNotFoundError,
 } from '../../../services/transactions/update-transaction.errors';
 import type { UpdateTransactionUseCase } from '../../../services/transactions/update-transaction.service';
+import { Effect, pipe } from '../../../shared/result';
 
 const resolveCreateTransactionUseCase = (db: NodePgDatabase) => {
   const container = createRequestContainer(db);
@@ -56,6 +58,89 @@ const resolveUpdateTransactionUseCase = (db: NodePgDatabase) => {
 const errorResponseSchema = z.object({
   message: z.string(),
 });
+
+type ErrorStatus = 400 | 403 | 404 | 500;
+
+type HttpError<S extends ErrorStatus = ErrorStatus> = {
+  status: S;
+  message: string;
+};
+
+const respondError = <S extends ErrorStatus, E extends Env, P extends string>(
+  c: Context<E, P>,
+  error: HttpError<S>,
+) => c.json({ message: error.message }, error.status);
+
+const normalizeError = (cause: unknown) =>
+  cause instanceof Error ? cause : new Error(String(cause));
+
+const toCreateTransactionHttpError = (
+  cause: unknown,
+): HttpError<400 | 404 | 500> => {
+  const error = normalizeError(cause);
+
+  if (
+    error instanceof InvalidTransactionTypeError ||
+    error instanceof TransactionTitleRequiredError ||
+    error instanceof TransactionTitleTooLongError ||
+    error instanceof InvalidAmountError ||
+    error instanceof InvalidDateFormatError ||
+    error instanceof FutureTransactionDateError ||
+    error instanceof TransactionMemoTooLongError ||
+    error instanceof CategoryTypeMismatchError
+  ) {
+    return { status: 400, message: error.message };
+  }
+
+  if (error instanceof CategoryNotFoundError) {
+    return { status: 404, message: error.message };
+  }
+
+  return { status: 500, message: '取引の作成に失敗しました' };
+};
+
+const toListTransactionsHttpError = (cause: unknown): HttpError<400 | 500> => {
+  const error = normalizeError(cause);
+
+  if (error instanceof InvalidPaginationError) {
+    return { status: 400, message: error.message };
+  }
+
+  return { status: 500, message: '取引一覧の取得に失敗しました' };
+};
+
+const toUpdateTransactionsHttpError = (
+  cause: unknown,
+): HttpError<400 | 403 | 404 | 500> => {
+  const error = normalizeError(cause);
+
+  if (
+    error instanceof InvalidTransactionTypeError ||
+    error instanceof TransactionTitleRequiredError ||
+    error instanceof TransactionTitleTooLongError ||
+    error instanceof InvalidAmountError ||
+    error instanceof InvalidDateFormatError ||
+    error instanceof FutureTransactionDateError ||
+    error instanceof TransactionMemoTooLongError ||
+    error instanceof CategoryTypeMismatchError ||
+    error instanceof InvalidCategoryIdsError
+  ) {
+    return { status: 400, message: error.message };
+  }
+
+  if (error instanceof NotOwnerError) {
+    return { status: 403, message: error.message };
+  }
+
+  if (
+    error instanceof TransactionNotFoundError ||
+    error instanceof CategoriesNotFoundError
+  ) {
+    return { status: 404, message: error.message };
+  }
+
+  return { status: 500, message: '取引の更新に失敗しました' };
+};
 
 const createTransactionRoute = createRoute({
   method: 'post',
@@ -211,83 +296,71 @@ export const registerTransactionsOpenApi = (
     const input = c.req.valid('json');
     const createTransactionUseCase = resolveCreateTransactionUseCase(db);
 
-    try {
-      const record = await createTransactionUseCase.execute({
-        userId: 1, // TODO: 認証実装後にctx.userIdから取得
-        type: input.type,
-        title: input.title,
-        amount: input.amount,
-        date: input.date,
-        categoryId: input.categoryId,
-        memo: input.memo,
-      });
-
-      return c.json(
-        {
-          transaction: {
-            id: record.id,
-            userId: record.userId,
-            type: record.type,
-            title: record.title,
-            amount: record.amount,
-            currency: record.currency,
-            date: record.date,
-            categoryId: record.categoryId,
-            memo: record.memo,
-          },
-        },
-        200,
-      );
-    } catch (cause) {
-      const error = cause instanceof Error ? cause : new Error(String(cause));
-
-      if (
-        error instanceof InvalidTransactionTypeError ||
-        error instanceof TransactionTitleRequiredError ||
-        error instanceof TransactionTitleTooLongError ||
-        error instanceof InvalidAmountError ||
-        error instanceof InvalidDateFormatError ||
-        error instanceof FutureTransactionDateError ||
-        error instanceof TransactionMemoTooLongError ||
-        error instanceof CategoryTypeMismatchError
-      ) {
-        return c.json({ message: error.message }, 400);
-      }
-
-      if (error instanceof CategoryNotFoundError) {
-        return c.json({ message: error.message }, 404);
-      }
-
-      return c.json({ message: '取引の作成に失敗しました' }, 500);
-    }
+    return Effect.runPromise(
+      pipe(
+        Effect.tryPromise({
+          try: () =>
+            createTransactionUseCase.execute({
+              userId: 1, // TODO: 認証実装後にctx.userIdから取得
+              type: input.type,
+              title: input.title,
+              amount: input.amount,
+              date: input.date,
+              categoryId: input.categoryId,
+              memo: input.memo,
+            }),
+          catch: (cause) => toCreateTransactionHttpError(cause),
+        }),
+        Effect.match({
+          onFailure: (error) => respondError(c, error),
+          onSuccess: (record) =>
+            c.json(
+              {
+                transaction: {
+                  id: record.id,
+                  userId: record.userId,
+                  type: record.type,
+                  title: record.title,
+                  amount: record.amount,
+                  currency: record.currency,
+                  date: record.date,
+                  categoryId: record.categoryId,
+                  memo: record.memo,
+                },
+              },
+              200,
+            ),
+        }),
+      ),
+    );
   });
 
   app.openapi(listTransactionsRoute, async (c) => {
     const input = c.req.valid('query');
     const listTransactionsUseCase = resolveListTransactionsUseCase(db);
 
-    try {
-      const output = await listTransactionsUseCase.execute({
-        userId: 1, // TODO: 認証実装後にctx.userIdから取得
-        startDate: input.startDate,
-        endDate: input.endDate,
-        type: input.type,
-        categoryIds: input.categoryIds,
-        order: input.order,
-        page: input.page,
-        limit: input.limit,
-      });
-
-      return c.json(output, 200);
-    } catch (cause) {
-      const error = cause instanceof Error ? cause : new Error(String(cause));
-
-      if (error instanceof InvalidPaginationError) {
-        return c.json({ message: error.message }, 400);
-      }
-
-      return c.json({ message: '取引一覧の取得に失敗しました' }, 500);
-    }
+    return Effect.runPromise(
+      pipe(
+        Effect.tryPromise({
+          try: () =>
+            listTransactionsUseCase.execute({
+              userId: 1, // TODO: 認証実装後にctx.userIdから取得
+              startDate: input.startDate,
+              endDate: input.endDate,
+              type: input.type,
+              categoryIds: input.categoryIds,
+              order: input.order,
+              page: input.page,
+              limit: input.limit,
+            }),
+          catch: (cause) => toListTransactionsHttpError(cause),
+        }),
+        Effect.match({
+          onFailure: (error) => respondError(c, error),
+          onSuccess: (output) => c.json(output, 200),
+        }),
+      ),
+    );
   });
 
   app.openapi(updateTransactionRoute, async (c) => {
@@ -295,48 +368,27 @@ export const registerTransactionsOpenApi = (
     const body = c.req.valid('json');
     const updateTransactionUseCase = resolveUpdateTransactionUseCase(db);
 
-    try {
-      const output = await updateTransactionUseCase.execute({
-        userId: 1, // TODO: 認証実装後にctx.userIdから取得
-        id,
-        type: body.type,
-        title: body.title,
-        amount: body.amount,
-        date: body.date,
-        categoryIds: body.categoryIds,
-        memo: body.memo,
-      });
-
-      return c.json(output, 200);
-    } catch (cause) {
-      const error = cause instanceof Error ? cause : new Error(String(cause));
-
-      if (
-        error instanceof InvalidTransactionTypeError ||
-        error instanceof TransactionTitleRequiredError ||
-        error instanceof TransactionTitleTooLongError ||
-        error instanceof InvalidAmountError ||
-        error instanceof InvalidDateFormatError ||
-        error instanceof FutureTransactionDateError ||
-        error instanceof TransactionMemoTooLongError ||
-        error instanceof CategoryTypeMismatchError ||
-        error instanceof InvalidCategoryIdsError
-      ) {
-        return c.json({ message: error.message }, 400);
-      }
-
-      if (error instanceof NotOwnerError) {
-        return c.json({ message: error.message }, 403);
-      }
-
-      if (
-        error instanceof TransactionNotFoundError ||
-        error instanceof CategoriesNotFoundError
-      ) {
-        return c.json({ message: error.message }, 404);
-      }
-
-      return c.json({ message: '取引の更新に失敗しました' }, 500);
-    }
+    return Effect.runPromise(
+      pipe(
+        Effect.tryPromise({
+          try: () =>
+            updateTransactionUseCase.execute({
+              userId: 1, // TODO: 認証実装後にctx.userIdから取得
+              id,
+              type: body.type,
+              title: body.title,
+              amount: body.amount,
+              date: body.date,
+              categoryIds: body.categoryIds,
+              memo: body.memo,
+            }),
+          catch: (cause) => toUpdateTransactionsHttpError(cause),
+        }),
+        Effect.match({
+          onFailure: (error) => respondError(c, error),
+          onSuccess: (output) => c.json(output, 200),
+        }),
+      ),
+    );
   });
 };

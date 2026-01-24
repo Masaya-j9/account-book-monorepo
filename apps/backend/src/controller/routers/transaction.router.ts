@@ -11,7 +11,6 @@ import {
   transactionsUpdateOutputSchema,
 } from '@account-book-app/shared';
 import { TRPCError } from '@trpc/server';
-
 import { createRequestContainer } from '../../infrastructre/di/container';
 import { TOKENS } from '../../services/di/tokens';
 import {
@@ -35,7 +34,9 @@ import {
   TransactionNotFoundError,
 } from '../../services/transactions/update-transaction.errors';
 import type { UpdateTransactionUseCase } from '../../services/transactions/update-transaction.service';
+import { Effect, pipe } from '../../shared/result';
 import { protectedProcedure, router } from '../trpc/trpc';
+import { runTrpcEffect } from './errors/trpc-effect';
 
 const resolveCreateTransactionUseCase = (db: NodePgDatabase) => {
   const container = createRequestContainer(db);
@@ -167,70 +168,68 @@ export const transactionRouter = router({
   create: protectedProcedure
     .input(transactionsCreateInputSchema)
     .output(transactionsCreateOutputSchema)
-    .mutation(async ({ input, ctx }) => {
-      try {
-        const createTransactionUseCase = resolveCreateTransactionUseCase(
-          ctx.db,
-        );
-        const transaction = await createTransactionUseCase.execute({
-          userId: ctx.userId,
-          type: input.type,
-          title: input.title,
-          amount: input.amount,
-          date: input.date,
-          categoryId: input.categoryId,
-          memo: input.memo,
-        });
-
-        return {
-          transaction,
-        };
-      } catch (error) {
-        throw toCreateTransactionTrpcError(error);
-      }
-    }),
+    .mutation(({ input, ctx }) =>
+      runTrpcEffect(
+        pipe(
+          Effect.tryPromise({
+            try: () =>
+              resolveCreateTransactionUseCase(ctx.db).execute({
+                userId: ctx.userId,
+                type: input.type,
+                title: input.title,
+                amount: input.amount,
+                date: input.date,
+                categoryId: input.categoryId,
+                memo: input.memo,
+              }),
+            catch: (cause) => toCreateTransactionTrpcError(cause),
+          }),
+          Effect.map((transaction) => ({ transaction })),
+        ),
+      ),
+    ),
 
   list: protectedProcedure
     .input(transactionsListInputSchema)
     .output(transactionsListOutputSchema)
-    .query(async ({ input, ctx }) => {
-      try {
-        const listTransactionsUseCase = resolveListTransactionsUseCase(ctx.db);
-        return await listTransactionsUseCase.execute({
-          userId: ctx.userId,
-          startDate: input.startDate,
-          endDate: input.endDate,
-          type: input.type,
-          categoryIds: input.categoryIds,
-          order: input.order,
-          page: input.page,
-          limit: input.limit,
-        });
-      } catch (error) {
-        throw toListTransactionsTrpcError(error);
-      }
-    }),
+    .query(({ input, ctx }) =>
+      runTrpcEffect(
+        Effect.tryPromise({
+          try: () =>
+            resolveListTransactionsUseCase(ctx.db).execute({
+              userId: ctx.userId,
+              startDate: input.startDate,
+              endDate: input.endDate,
+              type: input.type,
+              categoryIds: input.categoryIds,
+              order: input.order,
+              page: input.page,
+              limit: input.limit,
+            }),
+          catch: (cause) => toListTransactionsTrpcError(cause),
+        }),
+      ),
+    ),
 
   update: protectedProcedure
     .input(transactionsUpdateInputSchema)
     .output(transactionsUpdateOutputSchema)
-    .mutation(async ({ input, ctx }) => {
-      try {
-        const updateTransactionUseCase = resolveUpdateTransactionUseCase(
-          ctx.db,
-        );
-        return await updateTransactionUseCase.execute({
-          userId: ctx.userId,
-          id: input.id,
-          type: input.type,
-          title: input.title,
-          amount: input.amount,
-          date: input.date,
-          categoryIds: input.categoryIds,
-          memo: input.memo,
-        });
-      } catch (error) {
-        throw toUpdateTransactionTrpcError(error);
-      }
-    }),
+    .mutation(({ input, ctx }) =>
+      runTrpcEffect(
+        Effect.tryPromise({
+          try: () =>
+            resolveUpdateTransactionUseCase(ctx.db).execute({
+              userId: ctx.userId,
+              id: input.id,
+              type: input.type,
+              title: input.title,
+              amount: input.amount,
+              date: input.date,
+              categoryIds: input.categoryIds,
+              memo: input.memo,
+            }),
+          catch: (cause) => toUpdateTransactionTrpcError(cause),
+        }),
+      ),
+    ),
 });

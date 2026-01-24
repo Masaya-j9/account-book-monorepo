@@ -36,7 +36,9 @@ import {
 } from '../../services/categories/update-category.errors';
 import type { UpdateCategoryUseCase } from '../../services/categories/update-category.service';
 import { TOKENS } from '../../services/di/tokens';
+import { Effect, pipe } from '../../shared/result';
 import { protectedProcedure, router } from '../trpc/trpc';
+import { runTrpcEffect } from './errors/trpc-effect';
 
 const resolveCreateCategoryUseCase = (db: NodePgDatabase) => {
   const container = createRequestContainer(db);
@@ -184,81 +186,79 @@ export const categoryRouter = router({
   create: protectedProcedure
     .input(categoriesCreateInputSchema)
     .output(categoriesCreateOutputSchema)
-    .mutation(async ({ input, ctx }) => {
-      try {
-        const createCategoryUseCase = resolveCreateCategoryUseCase(ctx.db);
-        const category = await createCategoryUseCase.execute({
-          name: input.name,
-          typeId: input.typeId,
-          userId: ctx.userId,
-        });
-
-        return {
-          category,
-        };
-      } catch (error) {
-        throw toCreateCategoryTrpcError(error);
-      }
-    }),
+    .mutation(({ input, ctx }) =>
+      runTrpcEffect(
+        pipe(
+          Effect.tryPromise({
+            try: () =>
+              resolveCreateCategoryUseCase(ctx.db).execute({
+                name: input.name,
+                typeId: input.typeId,
+                userId: ctx.userId,
+              }),
+            catch: (cause) => toCreateCategoryTrpcError(cause),
+          }),
+          Effect.map((category) => ({ category })),
+        ),
+      ),
+    ),
 
   list: protectedProcedure
     .input(categoriesListInputSchema)
     .output(categoriesListOutputSchema)
-    .query(async ({ input, ctx }) => {
-      try {
-        const listCategoriesUseCase = resolveListCategoriesUseCase(ctx.db);
-        const result = await listCategoriesUseCase.execute({
-          userId: ctx.userId,
-          page: input.page,
-          perPage: input.perPage,
-          sortBy: input.sortBy,
-          sortOrder: input.sortOrder,
-          type: input.type,
-          includeHidden: input.includeHidden,
-        });
-
-        return result;
-      } catch (error) {
-        throw toListCategoriesTrpcError(error);
-      }
-    }),
+    .query(({ input, ctx }) =>
+      runTrpcEffect(
+        Effect.tryPromise({
+          try: () =>
+            resolveListCategoriesUseCase(ctx.db).execute({
+              userId: ctx.userId,
+              page: input.page,
+              perPage: input.perPage,
+              sortBy: input.sortBy,
+              sortOrder: input.sortOrder,
+              type: input.type,
+              includeHidden: input.includeHidden,
+            }),
+          catch: (cause) => toListCategoriesTrpcError(cause),
+        }),
+      ),
+    ),
 
   get: protectedProcedure
     .input(categoriesGetByIdInputSchema)
     .output(categoriesGetByIdOutputSchema)
-    .query(async ({ input, ctx }) => {
-      try {
-        const getCategoryUseCase = resolveGetCategoryUseCase(ctx.db);
-        const result = await getCategoryUseCase.execute({
-          id: input.id,
-          userId: ctx.userId,
-        });
-
-        return result;
-      } catch (error) {
-        throw toGetCategoryTrpcError(error);
-      }
-    }),
+    .query(({ input, ctx }) =>
+      runTrpcEffect(
+        Effect.tryPromise({
+          try: () =>
+            resolveGetCategoryUseCase(ctx.db).execute({
+              id: input.id,
+              userId: ctx.userId,
+            }),
+          catch: (cause) => toGetCategoryTrpcError(cause),
+        }),
+      ),
+    ),
 
   update: protectedProcedure
     .input(categoriesUpdateInputSchema)
     .output(categoriesUpdateOutputSchema)
-    .mutation(async ({ input, ctx }) => {
-      try {
-        const updateCategoryUseCase = resolveUpdateCategoryUseCase(ctx.db);
-        const category = await updateCategoryUseCase.execute({
-          categoryId: input.categoryId,
-          userId: ctx.userId,
-          isVisible: input.isVisible,
-          customName: input.customName,
-          displayOrder: input.displayOrder,
-        });
-
-        return {
-          category,
-        };
-      } catch (error) {
-        throw toUpdateCategoryTrpcError(error);
-      }
-    }),
+    .mutation(({ input, ctx }) =>
+      runTrpcEffect(
+        pipe(
+          Effect.tryPromise({
+            try: () =>
+              resolveUpdateCategoryUseCase(ctx.db).execute({
+                categoryId: input.categoryId,
+                userId: ctx.userId,
+                isVisible: input.isVisible,
+                customName: input.customName,
+                displayOrder: input.displayOrder,
+              }),
+            catch: (cause) => toUpdateCategoryTrpcError(cause),
+          }),
+          Effect.map((category) => ({ category })),
+        ),
+      ),
+    ),
 });

@@ -10,6 +10,7 @@ import {
 } from '@account-book-app/shared';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute, z } from '@hono/zod-openapi';
+import type { Context, Env } from 'hono';
 
 import { createRequestContainer } from '../../../infrastructre/di/container';
 import type { CreateCategoryUseCase } from '../../../services/categories/create.category.service';
@@ -34,6 +35,7 @@ import {
 } from '../../../services/categories/update-category.errors';
 import type { UpdateCategoryUseCase } from '../../../services/categories/update-category.service';
 import { TOKENS } from '../../../services/di/tokens';
+import { Effect, pipe } from '../../../shared/result';
 
 const resolveCreateCategoryUseCase = (db: NodePgDatabase) => {
   const container = createRequestContainer(db);
@@ -58,6 +60,88 @@ const resolveUpdateCategoryUseCase = (db: NodePgDatabase) => {
 const errorResponseSchema = z.object({
   message: z.string(),
 });
+
+type ErrorStatus = 400 | 403 | 404 | 409 | 500;
+
+type HttpError<S extends ErrorStatus = ErrorStatus> = {
+  status: S;
+  message: string;
+};
+
+const respondError = <S extends ErrorStatus, E extends Env, P extends string>(
+  c: Context<E, P>,
+  error: HttpError<S>,
+) => c.json({ message: error.message }, error.status);
+
+const normalizeError = (cause: unknown) =>
+  cause instanceof Error ? cause : new Error(String(cause));
+
+const toCreateCategoryHttpError = (
+  cause: unknown,
+): HttpError<400 | 409 | 500> => {
+  const error = normalizeError(cause);
+
+  if (
+    error instanceof TransactionTypeNotFoundError ||
+    error instanceof InvalidCategoryNameError ||
+    error instanceof InvalidTypeIdError
+  ) {
+    return { status: 400, message: error.message };
+  }
+
+  if (error instanceof DuplicateCategoryError) {
+    return { status: 409, message: error.message };
+  }
+
+  return { status: 500, message: 'カテゴリの作成に失敗しました' };
+};
+
+const toListCategoriesHttpError = (cause: unknown): HttpError<400 | 500> => {
+  const error = normalizeError(cause);
+
+  if (
+    error instanceof InvalidPaginationError ||
+    error instanceof InvalidSortParameterError
+  ) {
+    return { status: 400, message: error.message };
+  }
+
+  return { status: 500, message: 'カテゴリ一覧の取得に失敗しました' };
+};
+
+const toGetCategoryHttpError = (cause: unknown): HttpError<400 | 404 | 500> => {
+  const error = normalizeError(cause);
+
+  if (error instanceof InvalidCategoryIdError) {
+    return { status: 400, message: error.message };
+  }
+
+  if (error instanceof CategoryNotFoundError) {
+    return { status: 404, message: error.message };
+  }
+
+  return { status: 500, message: 'カテゴリの取得に失敗しました' };
+};
+
+const toUpdateCategoryHttpError = (
+  cause: unknown,
+): HttpError<400 | 403 | 404 | 500> => {
+  const error = normalizeError(cause);
+
+  if (error instanceof InvalidUpdateDataError) {
+    return { status: 400, message: error.message };
+  }
+
+  if (error instanceof DefaultCategoryUpdateForbiddenError) {
+    return { status: 403, message: error.message };
+  }
+
+  if (error instanceof UpdateCategoryNotFoundError) {
+    return { status: 404, message: error.message };
+  }
+
+  return { status: 500, message: 'カテゴリの更新に失敗しました' };
+};
 
 const createCategoryRoute = createRoute({
   method: 'post',
@@ -258,97 +342,83 @@ export const registerCategoriesOpenApi = (
     const input = c.req.valid('json');
     const createCategoryUseCase = resolveCreateCategoryUseCase(db);
 
-    try {
-      const record = await createCategoryUseCase.execute({
-        name: input.name,
-        typeId: input.typeId,
-        userId: 1,
-      });
-
-      return c.json(
-        {
-          category: {
-            id: record.id,
-            name: record.name,
-            type: record.type,
-            isDefault: record.isDefault,
-          },
-        },
-        200,
-      );
-    } catch (cause) {
-      const error = cause instanceof Error ? cause : new Error(String(cause));
-
-      if (
-        error instanceof TransactionTypeNotFoundError ||
-        error instanceof InvalidCategoryNameError ||
-        error instanceof InvalidTypeIdError
-      ) {
-        return c.json({ message: error.message }, 400);
-      }
-
-      if (error instanceof DuplicateCategoryError) {
-        return c.json({ message: error.message }, 409);
-      }
-
-      return c.json({ message: 'カテゴリの作成に失敗しました' }, 500);
-    }
+    return Effect.runPromise(
+      pipe(
+        Effect.tryPromise({
+          try: () =>
+            createCategoryUseCase.execute({
+              name: input.name,
+              typeId: input.typeId,
+              userId: 1,
+            }),
+          catch: (cause) => toCreateCategoryHttpError(cause),
+        }),
+        Effect.match({
+          onFailure: (error) => respondError(c, error),
+          onSuccess: (record) =>
+            c.json(
+              {
+                category: {
+                  id: record.id,
+                  name: record.name,
+                  type: record.type,
+                  isDefault: record.isDefault,
+                },
+              },
+              200,
+            ),
+        }),
+      ),
+    );
   });
 
   app.openapi(listCategoriesRoute, async (c) => {
     const query = c.req.valid('query');
     const listCategoriesUseCase = resolveListCategoriesUseCase(db);
 
-    try {
-      const result = await listCategoriesUseCase.execute({
-        userId: 1, // TODO: 認証実装後にctx.userIdから取得
-        page: query.page,
-        perPage: query.perPage,
-        sortBy: query.sortBy,
-        sortOrder: query.sortOrder,
-        type: query.type,
-        includeHidden: query.includeHidden,
-      });
-
-      return c.json(result, 200);
-    } catch (cause) {
-      const error = cause instanceof Error ? cause : new Error(String(cause));
-
-      if (
-        error instanceof InvalidPaginationError ||
-        error instanceof InvalidSortParameterError
-      ) {
-        return c.json({ message: error.message }, 400);
-      }
-
-      return c.json({ message: 'カテゴリ一覧の取得に失敗しました' }, 500);
-    }
+    return Effect.runPromise(
+      pipe(
+        Effect.tryPromise({
+          try: () =>
+            listCategoriesUseCase.execute({
+              userId: 1, // TODO: 認証実装後にctx.userIdから取得
+              page: query.page,
+              perPage: query.perPage,
+              sortBy: query.sortBy,
+              sortOrder: query.sortOrder,
+              type: query.type,
+              includeHidden: query.includeHidden,
+            }),
+          catch: (cause) => toListCategoriesHttpError(cause),
+        }),
+        Effect.match({
+          onFailure: (error) => respondError(c, error),
+          onSuccess: (result) => c.json(result, 200),
+        }),
+      ),
+    );
   });
 
   app.openapi(getCategoryRoute, async (c) => {
     const { id } = c.req.valid('param');
     const getCategoryUseCase = resolveGetCategoryUseCase(db);
 
-    try {
-      const result = await getCategoryUseCase.execute({
-        id,
-        userId: 1, // TODO: 認証実装後にctx.userIdから取得
-      });
-
-      return c.json(result, 200);
-    } catch (cause) {
-      const error = cause instanceof Error ? cause : new Error(String(cause));
-
-      if (error instanceof InvalidCategoryIdError) {
-        return c.json({ message: error.message }, 400);
-      }
-
-      if (error instanceof CategoryNotFoundError) {
-        return c.json({ message: error.message }, 404);
-      }
-
-      return c.json({ message: 'カテゴリの取得に失敗しました' }, 500);
-    }
+    return Effect.runPromise(
+      pipe(
+        Effect.tryPromise({
+          try: () =>
+            getCategoryUseCase.execute({
+              id,
+              userId: 1, // TODO: 認証実装後にctx.userIdから取得
+            }),
+          catch: (cause) => toGetCategoryHttpError(cause),
+        }),
+        Effect.match({
+          onFailure: (error) => respondError(c, error),
+          onSuccess: (result) => c.json(result, 200),
+        }),
+      ),
+    );
   });
 
   app.openapi(updateCategoryRoute, async (c) => {
@@ -356,32 +426,24 @@ export const registerCategoriesOpenApi = (
     const body = c.req.valid('json');
     const updateCategoryUseCase = resolveUpdateCategoryUseCase(db);
 
-    try {
-      const category = await updateCategoryUseCase.execute({
-        categoryId: id,
-        userId: 1, // TODO: 認証実装後にctx.userIdから取得
-        isVisible: body.isVisible,
-        customName: body.customName,
-        displayOrder: body.displayOrder,
-      });
-
-      return c.json({ category }, 200);
-    } catch (cause) {
-      const error = cause instanceof Error ? cause : new Error(String(cause));
-
-      if (error instanceof InvalidUpdateDataError) {
-        return c.json({ message: error.message }, 400);
-      }
-
-      if (error instanceof DefaultCategoryUpdateForbiddenError) {
-        return c.json({ message: error.message }, 403);
-      }
-
-      if (error instanceof UpdateCategoryNotFoundError) {
-        return c.json({ message: error.message }, 404);
-      }
-
-      return c.json({ message: 'カテゴリの更新に失敗しました' }, 500);
-    }
+    return Effect.runPromise(
+      pipe(
+        Effect.tryPromise({
+          try: () =>
+            updateCategoryUseCase.execute({
+              categoryId: id,
+              userId: 1, // TODO: 認証実装後にctx.userIdから取得
+              isVisible: body.isVisible,
+              customName: body.customName,
+              displayOrder: body.displayOrder,
+            }),
+          catch: (cause) => toUpdateCategoryHttpError(cause),
+        }),
+        Effect.match({
+          onFailure: (error) => respondError(c, error),
+          onSuccess: (category) => c.json({ category }, 200),
+        }),
+      ),
+    );
   });
 };
