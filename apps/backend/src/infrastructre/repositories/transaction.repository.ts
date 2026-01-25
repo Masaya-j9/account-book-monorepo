@@ -368,11 +368,13 @@ export class TransactionRepository implements ITransactionRepository {
     });
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(transaction: Transaction): Promise<void> {
     await this.db
       .update(transactions)
       .set({ deletedAt: sql`now()`, updatedAt: sql`now()` })
-      .where(eq(transactions.id, id));
+      .where(
+        sql`${transactions.id} = ${transaction.id} and ${transactions.deletedAt} is null`,
+      );
   }
 
   async existsByCategoryId(categoryId: number): Promise<boolean> {
