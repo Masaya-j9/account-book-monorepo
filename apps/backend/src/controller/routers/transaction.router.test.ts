@@ -19,6 +19,7 @@ import {
   NotOwnerError,
   TransactionNotFoundError,
 } from '../../services/transactions/update-transaction.errors';
+import { UnexpectedDeleteTransactionError } from '../../services/transactions/delete-transaction.errors';
 
 const { createRequestContainerMock, executeMock, getMock } = vi.hoisted(() => {
   const execute = vi.fn();
@@ -226,6 +227,14 @@ describe('transactionRouter（取引ルーター）', () => {
       ).rejects.toMatchObject({
         code: 'UNAUTHORIZED',
       });
+
+      await expect(
+        caller.delete({
+          id: 1,
+        }),
+      ).rejects.toMatchObject({
+        code: 'UNAUTHORIZED',
+      });
     });
 
     it('入力スキーマに違反する場合は usecase が呼ばれない', async () => {
@@ -252,6 +261,13 @@ describe('transactionRouter（取引ルーター）', () => {
 
       await expect(
         caller.update({
+          id: 0,
+        }),
+      ).rejects.toBeInstanceOf(TRPCError);
+      expect(executeMock).not.toHaveBeenCalled();
+
+      await expect(
+        caller.delete({
           id: 0,
         }),
       ).rejects.toBeInstanceOf(TRPCError);
@@ -540,6 +556,70 @@ describe('transactionRouter（取引ルーター）', () => {
         }),
       ).rejects.toMatchObject({
         code: 'BAD_REQUEST',
+      });
+    });
+  });
+
+  describe('delete', () => {
+    it('認証済みの場合、取引を削除できる', async () => {
+      executeMock.mockResolvedValueOnce({ deleted: true });
+
+      const caller = transactionRouter.createCaller({ db, userId: 1 });
+      const result = await caller.delete({ id: 1 });
+
+      expect(createRequestContainerMock).toHaveBeenCalledWith(db);
+      expect(getMock).toHaveBeenCalledWith(TOKENS.DeleteTransactionUseCase);
+      expect(executeMock).toHaveBeenCalledWith({ userId: 1, id: 1 });
+      expect(result).toEqual({ deleted: true });
+    });
+
+    it('取引が見つからない場合は NOT_FOUND に変換される', async () => {
+      executeMock.mockRejectedValueOnce(new TransactionNotFoundError(999));
+
+      const caller = transactionRouter.createCaller({ db, userId: 1 });
+
+      await expect(
+        caller.delete({
+          id: 999,
+        }),
+      ).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
+    });
+
+    it('権限がない場合は FORBIDDEN に変換される', async () => {
+      executeMock.mockRejectedValueOnce(new NotOwnerError());
+
+      const caller = transactionRouter.createCaller({ db, userId: 1 });
+
+      await expect(
+        caller.delete({
+          id: 1,
+        }),
+      ).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+    });
+
+    it('想定外の例外は INTERNAL_SERVER_ERROR に変換される', async () => {
+      executeMock.mockRejectedValueOnce(
+        new UnexpectedDeleteTransactionError({
+          message: '取引の削除に失敗しました',
+        }),
+      );
+
+      const caller = transactionRouter.createCaller({ db, userId: 1 });
+
+      const error = await caller
+        .delete({
+          id: 1,
+        })
+        .catch((e) => e);
+
+      expect(error).toBeInstanceOf(TRPCError);
+      expect(error).toMatchObject({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: '取引の削除に失敗しました',
       });
     });
   });

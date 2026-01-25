@@ -2,6 +2,7 @@ import type { NodePgDatabase } from '@account-book-app/db';
 import {
   transactionsCreateInputSchema,
   transactionsCreateOutputSchema,
+  transactionsDeleteOutputSchema,
   transactionsListInputSchema,
   transactionsListOutputSchema,
   transactionsUpdateInputSchema,
@@ -33,7 +34,9 @@ import {
   NotOwnerError,
   TransactionNotFoundError,
 } from '../../../services/transactions/update-transaction.errors';
+import { UnexpectedDeleteTransactionError } from '../../../services/transactions/delete-transaction.errors';
 import type { UpdateTransactionUseCase } from '../../../services/transactions/update-transaction.service';
+import type { DeleteTransactionUseCase } from '../../../services/transactions/delete-transaction.service';
 import { Effect, pipe } from '../../../shared/result';
 
 const resolveCreateTransactionUseCase = (db: NodePgDatabase) => {
@@ -52,6 +55,13 @@ const resolveUpdateTransactionUseCase = (db: NodePgDatabase) => {
   const container = createRequestContainer(db);
   return container.get<UpdateTransactionUseCase>(
     TOKENS.UpdateTransactionUseCase,
+  );
+};
+
+const resolveDeleteTransactionUseCase = (db: NodePgDatabase) => {
+  const container = createRequestContainer(db);
+  return container.get<DeleteTransactionUseCase>(
+    TOKENS.DeleteTransactionUseCase,
   );
 };
 
@@ -140,6 +150,26 @@ const toUpdateTransactionsHttpError = (
   }
 
   return { status: 500, message: '取引の更新に失敗しました' };
+};
+
+const toDeleteTransactionsHttpError = (
+  cause: unknown,
+): HttpError<403 | 404 | 500> => {
+  const error = normalizeError(cause);
+
+  if (error instanceof TransactionNotFoundError) {
+    return { status: 404, message: error.message };
+  }
+
+  if (error instanceof NotOwnerError) {
+    return { status: 403, message: error.message };
+  }
+
+  if (error instanceof UnexpectedDeleteTransactionError) {
+    return { status: 500, message: error.message };
+  }
+
+  return { status: 500, message: '取引の削除に失敗しました' };
 };
 
 const createTransactionRoute = createRoute({
@@ -288,6 +318,51 @@ const updateTransactionRoute = createRoute({
   },
 });
 
+const deleteTransactionRoute = createRoute({
+  method: 'delete',
+  path: '/transactions/{id}',
+  tags: ['transactions'],
+  request: {
+    params: z.object({
+      id: z.string().regex(/^\d+$/).transform(Number),
+    }),
+  },
+  responses: {
+    200: {
+      description: '取引削除',
+      content: {
+        'application/json': {
+          schema: transactionsDeleteOutputSchema,
+        },
+      },
+    },
+    403: {
+      description: '権限がありません',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    404: {
+      description: '取引が見つかりません',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    500: {
+      description: 'サーバーエラー',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
 export const registerTransactionsOpenApi = (
   app: OpenAPIHono,
   db: NodePgDatabase,
@@ -383,6 +458,28 @@ export const registerTransactionsOpenApi = (
               memo: body.memo,
             }),
           catch: (cause) => toUpdateTransactionsHttpError(cause),
+        }),
+        Effect.match({
+          onFailure: (error) => respondError(c, error),
+          onSuccess: (output) => c.json(output, 200),
+        }),
+      ),
+    );
+  });
+
+  app.openapi(deleteTransactionRoute, async (c) => {
+    const { id } = c.req.valid('param');
+    const deleteTransactionUseCase = resolveDeleteTransactionUseCase(db);
+
+    return Effect.runPromise(
+      pipe(
+        Effect.tryPromise({
+          try: () =>
+            deleteTransactionUseCase.execute({
+              userId: 1, // TODO: 認証実装後にctx.userIdから取得
+              id,
+            }),
+          catch: (cause) => toDeleteTransactionsHttpError(cause),
         }),
         Effect.match({
           onFailure: (error) => respondError(c, error),

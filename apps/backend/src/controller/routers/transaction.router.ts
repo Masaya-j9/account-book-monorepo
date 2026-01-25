@@ -5,6 +5,8 @@ import type { NodePgDatabase } from '@account-book-app/db';
 import {
   transactionsCreateInputSchema,
   transactionsCreateOutputSchema,
+  transactionsDeleteInputSchema,
+  transactionsDeleteOutputSchema,
   transactionsListInputSchema,
   transactionsListOutputSchema,
   transactionsUpdateInputSchema,
@@ -33,7 +35,9 @@ import {
   NotOwnerError,
   TransactionNotFoundError,
 } from '../../services/transactions/update-transaction.errors';
+import { UnexpectedDeleteTransactionError } from '../../services/transactions/delete-transaction.errors';
 import type { UpdateTransactionUseCase } from '../../services/transactions/update-transaction.service';
+import type { DeleteTransactionUseCase } from '../../services/transactions/delete-transaction.service';
 import { Effect, pipe } from '../../shared/result';
 import { protectedProcedure, router } from '../trpc/trpc';
 import { runTrpcEffect } from './errors/trpc-effect';
@@ -54,6 +58,13 @@ const resolveUpdateTransactionUseCase = (db: NodePgDatabase) => {
   const container = createRequestContainer(db);
   return container.get<UpdateTransactionUseCase>(
     TOKENS.UpdateTransactionUseCase,
+  );
+};
+
+const resolveDeleteTransactionUseCase = (db: NodePgDatabase) => {
+  const container = createRequestContainer(db);
+  return container.get<DeleteTransactionUseCase>(
+    TOKENS.DeleteTransactionUseCase,
   );
 };
 
@@ -164,6 +175,40 @@ const toUpdateTransactionTrpcError = <T>(cause: T) => {
   });
 };
 
+const toDeleteTransactionTrpcError = <T>(cause: T) => {
+  const error = cause instanceof Error ? cause : new Error(String(cause));
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('[transactions.delete] error:', error);
+  }
+
+  if (error instanceof TransactionNotFoundError) {
+    return new TRPCError({
+      code: 'NOT_FOUND',
+      message: error.message,
+    });
+  }
+
+  if (error instanceof NotOwnerError) {
+    return new TRPCError({
+      code: 'FORBIDDEN',
+      message: error.message,
+    });
+  }
+
+  if (error instanceof UnexpectedDeleteTransactionError) {
+    return new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: error.message,
+    });
+  }
+
+  return new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: '取引の削除に失敗しました',
+  });
+};
+
 export const transactionRouter = router({
   create: protectedProcedure
     .input(transactionsCreateInputSchema)
@@ -229,6 +274,22 @@ export const transactionRouter = router({
               memo: input.memo,
             }),
           catch: (cause) => toUpdateTransactionTrpcError(cause),
+        }),
+      ),
+    ),
+
+  delete: protectedProcedure
+    .input(transactionsDeleteInputSchema)
+    .output(transactionsDeleteOutputSchema)
+    .mutation(({ input, ctx }) =>
+      runTrpcEffect(
+        Effect.tryPromise({
+          try: () =>
+            resolveDeleteTransactionUseCase(ctx.db).execute({
+              userId: ctx.userId,
+              id: input.id,
+            }),
+          catch: (cause) => toDeleteTransactionTrpcError(cause),
         }),
       ),
     ),
