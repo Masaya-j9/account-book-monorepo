@@ -54,3 +54,12 @@ export const transactionsUpdateOutputSchema = z.object({
 export type TransactionsUpdateOutput = z.infer<
   typeof transactionsUpdateOutputSchema
 >;
+
+// transactions.delete Output
+export const transactionsDeleteOutputSchema = z.object({
+  deleted: z.boolean(),
+});
+
+export type TransactionsDeleteOutput = z.infer<
+  typeof transactionsDeleteOutputSchema
+>;
