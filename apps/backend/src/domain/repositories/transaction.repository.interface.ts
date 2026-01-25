@@ -70,7 +70,7 @@ export interface ITransactionRepository {
   /**
    * 取引を削除する
    */
-  delete(id: number): Promise<void>;
+  delete(transaction: Transaction): Promise<void>;
 
   /**
    * カテゴリIDが使用されているかチェックする

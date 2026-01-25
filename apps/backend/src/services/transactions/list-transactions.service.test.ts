@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { CategoryRecord } from '../../domain/entities/category.entity';
 import type {
   CreateTransactionData,
+  Transaction,
   TransactionListItemRecord,
   TransactionRecord,
 } from '../../domain/entities/transaction.entity';
@@ -106,7 +107,9 @@ describe('ListTransactionsUseCase（取引一覧取得）', () => {
       throw new Error('not used');
     };
 
-    const notUsedDelete = async (_id: number): Promise<void> => {
+    const notUsedDelete: ITransactionRepository['delete'] = async (
+      _transaction: Transaction,
+    ): Promise<void> => {
       throw new Error('not used');
     };
 

@@ -133,3 +133,12 @@ export const transactionsUpdateInputSchema = z.object({
 export type TransactionsUpdateInput = z.infer<
   typeof transactionsUpdateInputSchema
 >;
+
+// transactions.delete
+export const transactionsDeleteInputSchema = z.object({
+  id: z.number().int().positive(),
+});
+
+export type TransactionsDeleteInput = z.infer<
+  typeof transactionsDeleteInputSchema
+>;
