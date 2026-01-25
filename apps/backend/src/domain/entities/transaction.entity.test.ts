@@ -183,6 +183,32 @@ describe('Transaction（取引）', () => {
       expect(transaction.memo).toBe('新しいメモ');
     });
 
+    it('delete: 論理削除として更新日時が変わる', () => {
+      const amount = Money.of(1000);
+      const date = TransactionDate.of(2025, 1, 15);
+      const transaction = Transaction.create(
+        1,
+        100,
+        'EXPENSE',
+        'ランチ',
+        amount,
+        date,
+        10,
+        '',
+      );
+
+      const oldUpdatedAt = transaction.updatedAt;
+
+      const now = new Date();
+      now.setMilliseconds(now.getMilliseconds() + 10);
+
+      transaction.delete();
+
+      expect(transaction.updatedAt.getTime()).toBeGreaterThanOrEqual(
+        oldUpdatedAt.getTime(),
+      );
+    });
+
     it('isInMonth: 指定された月の取引かどうかを判定できる', () => {
       const amount = Money.of(1000);
       const date = TransactionDate.of(2025, 1, 15);

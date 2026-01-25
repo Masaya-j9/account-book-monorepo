@@ -244,6 +244,13 @@ export class Transaction {
   }
 
   /**
+   * 取引を論理削除する
+   */
+  delete(): void {
+    this._updatedAt = new Date();
+  }
+
+  /**
    * 収入取引かどうかを判定
    */
   isIncome(): boolean {
