@@ -9,4 +9,5 @@ export const TOKENS = {
   CreateTransactionUseCase: Symbol.for('CreateTransactionUseCase'),
   ListTransactionsUseCase: Symbol.for('ListTransactionsUseCase'),
   UpdateTransactionUseCase: Symbol.for('UpdateTransactionUseCase'),
+  DeleteTransactionUseCase: Symbol.for('DeleteTransactionUseCase'),
 } as const;
