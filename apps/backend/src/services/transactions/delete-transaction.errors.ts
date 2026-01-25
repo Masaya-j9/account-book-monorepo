@@ -1,5 +1,5 @@
 import { DomainError } from '../../domain/values/domain-error';
-import {
+import type {
   NotOwnerError,
   TransactionNotFoundError,
 } from './update-transaction.errors';

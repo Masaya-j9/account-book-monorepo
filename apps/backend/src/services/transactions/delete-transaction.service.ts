@@ -5,16 +5,16 @@ import { inject, injectable } from 'inversify';
 
 import type { TransactionRecord } from '../../domain/entities/transaction.entity';
 import { Transaction } from '../../domain/entities/transaction.entity';
+import type { ITransactionRepository } from '../../domain/repositories/transaction.repository.interface';
 import { Money } from '../../domain/values/money';
 import { TransactionDate } from '../../domain/values/transaction-date';
-import type { ITransactionRepository } from '../../domain/repositories/transaction.repository.interface';
 import { Effect, pipe } from '../../shared/result';
 import { TOKENS } from '../di/tokens';
 import {
+  type DeleteTransactionError,
   NotOwnerError,
   TransactionNotFoundError,
   UnexpectedDeleteTransactionError,
-  type DeleteTransactionError,
 } from './delete-transaction.errors';
 
 export type DeleteTransactionInput = {

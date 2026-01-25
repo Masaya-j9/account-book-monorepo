@@ -12,6 +12,7 @@ import {
   InvalidTransactionTypeError,
   TransactionTitleRequiredError,
 } from '../../services/transactions/create-transaction.errors';
+import { UnexpectedDeleteTransactionError } from '../../services/transactions/delete-transaction.errors';
 import { InvalidPaginationError } from '../../services/transactions/list-transactions.errors';
 import {
   CategoriesNotFoundError,
@@ -19,7 +20,6 @@ import {
   NotOwnerError,
   TransactionNotFoundError,
 } from '../../services/transactions/update-transaction.errors';
-import { UnexpectedDeleteTransactionError } from '../../services/transactions/delete-transaction.errors';
 
 const { createRequestContainerMock, executeMock, getMock } = vi.hoisted(() => {
   const execute = vi.fn();
