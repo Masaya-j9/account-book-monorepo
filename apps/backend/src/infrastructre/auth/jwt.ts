@@ -4,7 +4,7 @@ import { injectable } from 'inversify';
 import type { ICreateJwtTokenProvider } from '../../services/auth/create-jwt.service';
 
 const JWT_SECRET_ENV_KEY = 'JWT_SECRET';
-const JWT_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 7;
+const JWT_EXPIRES_IN_SECONDS_ENV_KEY = 'JWT_EXPIRES_IN_SECONDS';
 
 export type AccessTokenPayload = {
   sub: string;
@@ -23,16 +23,33 @@ const resolveJwtSecret = (): string => {
   return value;
 };
 
+const resolveJwtExpiresInSeconds = (): number => {
+  const value = process.env[JWT_EXPIRES_IN_SECONDS_ENV_KEY];
+
+  if (!value) {
+    throw new Error('JWT_EXPIRES_IN_SECONDS が設定されていません');
+  }
+
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error('JWT_EXPIRES_IN_SECONDS は正の整数で設定してください');
+  }
+
+  return parsed;
+};
+
 export const createAccessToken = async (params: {
   userId: number;
   email: string;
 }): Promise<string> => {
   const now = Math.floor(Date.now() / 1000);
+  const expiresInSeconds = resolveJwtExpiresInSeconds();
   const payload: AccessTokenPayload = {
     sub: String(params.userId),
     email: params.email,
     iat: now,
-    exp: now + JWT_EXPIRES_IN_SECONDS,
+    exp: now + expiresInSeconds,
   };
 
   return sign(payload, resolveJwtSecret());
