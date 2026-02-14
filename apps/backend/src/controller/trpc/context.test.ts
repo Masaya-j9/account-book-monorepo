@@ -1,13 +1,14 @@
 import type { NodePgDatabase } from '@account-book-app/db';
 import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Effect } from '../../shared/result';
 
-const { verifyAccessTokenMock } = vi.hoisted(() => ({
-  verifyAccessTokenMock: vi.fn(),
+const { verifyAccessTokenEffectMock } = vi.hoisted(() => ({
+  verifyAccessTokenEffectMock: vi.fn(),
 }));
 
 vi.mock('../../infrastructre/auth/jwt', () => ({
-  verifyAccessToken: verifyAccessTokenMock,
+  verifyAccessTokenEffect: verifyAccessTokenEffectMock,
 }));
 
 import { createContext } from './context';
@@ -36,33 +37,37 @@ describe('createContext（tRPCコンテキスト）', () => {
 
   describe('正常系', () => {
     it('Bearerトークンを正しく抽出して検証へ渡す', async () => {
-      verifyAccessTokenMock.mockResolvedValueOnce({
-        sub: '10',
-        email: 'user@example.com',
-        iat: 1,
-        exp: 2,
-      });
+      verifyAccessTokenEffectMock.mockReturnValueOnce(
+        Effect.succeed({
+          sub: '10',
+          email: 'user@example.com',
+          iat: 1,
+          exp: 2,
+        }),
+      );
 
       const contextFactory = createContext(db);
       await contextFactory(createOptions('Bearer extracted.token.value'));
 
-      expect(verifyAccessTokenMock).toHaveBeenCalledWith(
+      expect(verifyAccessTokenEffectMock).toHaveBeenCalledWith(
         'extracted.token.value',
       );
     });
 
     it('Bearerトークンが有効な場合はuserIdを設定する', async () => {
-      verifyAccessTokenMock.mockResolvedValueOnce({
-        sub: '123',
-        email: 'user@example.com',
-        iat: 1,
-        exp: 2,
-      });
+      verifyAccessTokenEffectMock.mockReturnValueOnce(
+        Effect.succeed({
+          sub: '123',
+          email: 'user@example.com',
+          iat: 1,
+          exp: 2,
+        }),
+      );
 
       const contextFactory = createContext(db);
       const result = await contextFactory(createOptions('Bearer valid.token'));
 
-      expect(verifyAccessTokenMock).toHaveBeenCalledWith('valid.token');
+      expect(verifyAccessTokenEffectMock).toHaveBeenCalledWith('valid.token');
       expect(result).toEqual({
         db,
         userId: 123,
@@ -75,7 +80,7 @@ describe('createContext（tRPCコンテキスト）', () => {
       const contextFactory = createContext(db);
       const result = await contextFactory(createOptions());
 
-      expect(verifyAccessTokenMock).not.toHaveBeenCalled();
+      expect(verifyAccessTokenEffectMock).not.toHaveBeenCalled();
       expect(result).toEqual({
         db,
         userId: undefined,
@@ -86,7 +91,7 @@ describe('createContext（tRPCコンテキスト）', () => {
       const contextFactory = createContext(db);
       const result = await contextFactory(createOptions('Basic abc.def'));
 
-      expect(verifyAccessTokenMock).not.toHaveBeenCalled();
+      expect(verifyAccessTokenEffectMock).not.toHaveBeenCalled();
       expect(result).toEqual({
         db,
         userId: undefined,
@@ -94,14 +99,20 @@ describe('createContext（tRPCコンテキスト）', () => {
     });
 
     it('トークン検証に失敗した場合はuserIdを設定しない', async () => {
-      verifyAccessTokenMock.mockRejectedValueOnce(new Error('invalid token'));
+      verifyAccessTokenEffectMock.mockReturnValueOnce(
+        Effect.fail({
+          _tag: 'JwtTokenInvalidError',
+          message: 'JWTの署名または内容が不正です',
+          cause: new Error('invalid token'),
+        }),
+      );
 
       const contextFactory = createContext(db);
       const result = await contextFactory(
         createOptions('Bearer invalid.token'),
       );
 
-      expect(verifyAccessTokenMock).toHaveBeenCalledWith('invalid.token');
+      expect(verifyAccessTokenEffectMock).toHaveBeenCalledWith('invalid.token');
       expect(result).toEqual({
         db,
         userId: undefined,
@@ -109,17 +120,19 @@ describe('createContext（tRPCコンテキスト）', () => {
     });
 
     it('subが正の整数でない場合はuserIdを設定しない', async () => {
-      verifyAccessTokenMock.mockResolvedValueOnce({
-        sub: 'abc',
-        email: 'user@example.com',
-        iat: 1,
-        exp: 2,
-      });
+      verifyAccessTokenEffectMock.mockReturnValueOnce(
+        Effect.succeed({
+          sub: 'abc',
+          email: 'user@example.com',
+          iat: 1,
+          exp: 2,
+        }),
+      );
 
       const contextFactory = createContext(db);
       const result = await contextFactory(createOptions('Bearer valid.token'));
 
-      expect(verifyAccessTokenMock).toHaveBeenCalledWith('valid.token');
+      expect(verifyAccessTokenEffectMock).toHaveBeenCalledWith('valid.token');
       expect(result).toEqual({
         db,
         userId: undefined,
@@ -129,19 +142,21 @@ describe('createContext（tRPCコンテキスト）', () => {
     it.each(['-1', '1.5', 'NaN', '0'])(
       'subが%sの場合はuserIdを設定しない',
       async (sub) => {
-        verifyAccessTokenMock.mockResolvedValueOnce({
-          sub,
-          email: 'user@example.com',
-          iat: 1,
-          exp: 2,
-        });
+        verifyAccessTokenEffectMock.mockReturnValueOnce(
+          Effect.succeed({
+            sub,
+            email: 'user@example.com',
+            iat: 1,
+            exp: 2,
+          }),
+        );
 
         const contextFactory = createContext(db);
         const result = await contextFactory(
           createOptions('Bearer valid.token'),
         );
 
-        expect(verifyAccessTokenMock).toHaveBeenCalledWith('valid.token');
+        expect(verifyAccessTokenEffectMock).toHaveBeenCalledWith('valid.token');
         expect(result).toEqual({
           db,
           userId: undefined,

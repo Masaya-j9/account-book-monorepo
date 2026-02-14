@@ -3,7 +3,11 @@
 
 import type { NodePgDatabase } from '@account-book-app/db';
 import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
-import { verifyAccessToken } from '../../infrastructre/auth/jwt';
+import {
+  type JwtVerifyError,
+  verifyAccessTokenEffect,
+} from '../../infrastructre/auth/jwt';
+import { Effect, pipe } from '../../shared/result';
 
 export interface Context extends Record<string, unknown> {
   db: NodePgDatabase;
@@ -35,7 +39,16 @@ const getBearerToken = (authorization: string | null): string | undefined => {
 };
 
 const resolveUserId = async (token: string): Promise<number | undefined> => {
-  const payload = await verifyAccessToken(token).catch(() => undefined);
+  const payload = await Effect.runPromise(
+    pipe(
+      verifyAccessTokenEffect(token),
+      Effect.tapError((error) => Effect.sync(() => logJwtVerifyError(error))),
+      Effect.match({
+        onFailure: () => undefined,
+        onSuccess: (value) => value,
+      }),
+    ),
+  );
 
   if (!payload) {
     return undefined;
@@ -43,4 +56,12 @@ const resolveUserId = async (token: string): Promise<number | undefined> => {
 
   const userId = Number(payload.sub);
   return Number.isInteger(userId) && userId > 0 ? userId : undefined;
+};
+
+const logJwtVerifyError = (error: JwtVerifyError): void => {
+  console.warn('[auth] JWT検証に失敗しました', {
+    type: error._tag,
+    message: error.message,
+    cause: error.cause.message,
+  });
 };

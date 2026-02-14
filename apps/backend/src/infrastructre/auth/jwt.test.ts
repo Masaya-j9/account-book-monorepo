@@ -64,6 +64,40 @@ describe('jwt（JWTユーティリティ）', () => {
       ).rejects.toThrow('JWT_EXPIRES_IN_SECONDS が設定されていません');
     });
 
+    it('JWT_EXPIRES_IN_SECONDS が0以下の場合は作成で例外になる', async () => {
+      process.env.JWT_EXPIRES_IN_SECONDS = '0';
+
+      await expect(
+        createAccessToken({
+          userId: 1,
+          email: 'user@example.com',
+        }),
+      ).rejects.toThrow('JWT_EXPIRES_IN_SECONDS は正の整数で設定してください');
+    });
+
+    it('JWT_EXPIRES_IN_SECONDS が数値でない場合は作成で例外になる', async () => {
+      process.env.JWT_EXPIRES_IN_SECONDS = 'not-number';
+
+      await expect(
+        createAccessToken({
+          userId: 1,
+          email: 'user@example.com',
+        }),
+      ).rejects.toThrow('JWT_EXPIRES_IN_SECONDS は正の整数で設定してください');
+    });
+
+    it('JWT_SECRET が未設定の場合は検証で例外になる', async () => {
+      const token = await createAccessToken({
+        userId: 1,
+        email: 'user@example.com',
+      });
+      delete process.env.JWT_SECRET;
+
+      await expect(verifyAccessToken(token)).rejects.toThrow(
+        'JWT_SECRET が設定されていません',
+      );
+    });
+
     it('不正なトークンは検証で例外になる', async () => {
       await expect(
         verifyAccessToken('invalid.token.value'),
