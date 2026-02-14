@@ -4,6 +4,7 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 
 import { registerCategoriesOpenApi } from './categories.openapi';
 import { registerTransactionsOpenApi } from './transactions.openapi';
+import { registerUsersOpenApi } from './users.openapi';
 
 export const registerOpenApi = (app: OpenAPIHono, db: NodePgDatabase) => {
   app.doc('/openapi.json', (c) => ({
@@ -24,4 +25,5 @@ export const registerOpenApi = (app: OpenAPIHono, db: NodePgDatabase) => {
 
   registerCategoriesOpenApi(app, db);
   registerTransactionsOpenApi(app, db);
+  registerUsersOpenApi(app, db);
 };

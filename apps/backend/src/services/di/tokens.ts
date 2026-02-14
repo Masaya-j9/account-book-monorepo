@@ -2,6 +2,7 @@ export const TOKENS = {
   Db: Symbol.for('Db'),
   CategoryRepository: Symbol.for('CategoryRepository'),
   TransactionRepository: Symbol.for('TransactionRepository'),
+  UserRepository: Symbol.for('UserRepository'),
   CreateCategoryUseCase: Symbol.for('CreateCategoryUseCase'),
   ListCategoriesUseCase: Symbol.for('ListCategoriesUseCase'),
   GetCategoryUseCase: Symbol.for('GetCategoryUseCase'),
@@ -10,4 +11,7 @@ export const TOKENS = {
   ListTransactionsUseCase: Symbol.for('ListTransactionsUseCase'),
   UpdateTransactionUseCase: Symbol.for('UpdateTransactionUseCase'),
   DeleteTransactionUseCase: Symbol.for('DeleteTransactionUseCase'),
+  RegisterUserUseCase: Symbol.for('RegisterUserUseCase'),
+  CreateJwtService: Symbol.for('CreateJwtService'),
+  CreateJwtTokenProvider: Symbol.for('CreateJwtTokenProvider'),
 } as const;
