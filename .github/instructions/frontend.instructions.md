@@ -59,6 +59,10 @@ applyTo: "apps/frontend/**"
 
 - `apps/frontend`: Next.js 15 + React 19
 
+### 参照ドキュメント
+
+- モノレポ構造: `docs/monorepo-structure.md`
+
 ### コーディング規約
 
 - Biome を使用した Lint と Format
