@@ -9,13 +9,11 @@ describe('User（ユーザー）', () => {
       const passwordHash = PasswordHash.reconstruct('salt:hash');
 
       const user = User.create(
-        1,
         ' TestUser@Example.com ',
         passwordHash,
         ' テスト ',
       );
 
-      expect(user.id).toBe(1);
       expect(user.email).toBe('testuser@example.com');
       expect(user.passwordHash.value).toBe('salt:hash');
       expect(user.name).toBe('テスト');
@@ -72,29 +70,36 @@ describe('User（ユーザー）', () => {
       const passwordHash = PasswordHash.reconstruct('salt:hash');
 
       expect(() =>
-        User.create(1, 'invalid-email', passwordHash, 'テスト'),
+        User.create('invalid-email', passwordHash, 'テスト'),
       ).toThrow(UserDomainError);
       expect(() =>
-        User.create(1, 'invalid-email', passwordHash, 'テスト'),
+        User.create('invalid-email', passwordHash, 'テスト'),
       ).toThrow('メールアドレスの形式が不正です');
     });
 
     it('create: 名前が空の場合は例外になる', () => {
       const passwordHash = PasswordHash.reconstruct('salt:hash');
 
-      expect(() =>
-        User.create(1, 'user@example.com', passwordHash, '  '),
-      ).toThrow(UserDomainError);
-      expect(() =>
-        User.create(1, 'user@example.com', passwordHash, '  '),
-      ).toThrow('ユーザー名は必須です');
+      expect(() => User.create('user@example.com', passwordHash, '  ')).toThrow(
+        UserDomainError,
+      );
+      expect(() => User.create('user@example.com', passwordHash, '  ')).toThrow(
+        'ユーザー名は必須です',
+      );
     });
 
     it('create: パスワードハッシュ値オブジェクトを保持できる', () => {
       const passwordHash = PasswordHash.reconstruct('salt:hash');
-      const user = User.create(1, 'user@example.com', passwordHash, 'テスト');
+      const user = User.create('user@example.com', passwordHash, 'テスト');
 
       expect(user.passwordHash.value).toBe('salt:hash');
+    });
+
+    it('create: 新規生成直後にidを参照すると例外になる', () => {
+      const passwordHash = PasswordHash.reconstruct('salt:hash');
+      const user = User.create('user@example.com', passwordHash, 'テスト');
+
+      expect(() => user.id).toThrow('ユーザーIDが未採番です');
     });
   });
 });

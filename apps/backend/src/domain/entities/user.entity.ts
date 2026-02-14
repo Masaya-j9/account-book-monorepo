@@ -13,7 +13,7 @@ export class UserDomainError extends DomainError {
 
 export class User {
   private constructor(
-    private readonly _id: UserId,
+    private readonly _id: UserId | undefined,
     private _email: string,
     private _passwordHash: PasswordHash,
     private _name: string,
@@ -21,23 +21,17 @@ export class User {
     private _updatedAt: Date,
   ) {}
 
-  static create(
-    idValue: number,
-    email: string,
-    passwordHash: PasswordHash,
-    name: string,
-  ): User {
+  static create(email: string, passwordHash: PasswordHash, name: string): User {
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedName = name.trim();
 
     User.validateEmail(normalizedEmail);
     User.validateName(normalizedName);
 
-    const id = createId<UserId>(idValue, 'UserId');
     const now = new Date();
 
     return new User(
-      id,
+      undefined,
       normalizedEmail,
       passwordHash,
       normalizedName,
@@ -59,6 +53,10 @@ export class User {
   }
 
   get id(): UserId {
+    if (this._id === undefined) {
+      throw new UserDomainError('ユーザーIDが未採番です');
+    }
+
     return this._id;
   }
 
