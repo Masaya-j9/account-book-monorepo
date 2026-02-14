@@ -1,11 +1,9 @@
 import { Container } from 'inversify';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type {
-  CreateUserData,
-  UserRecord,
-} from '../../domain/entities/user.entity';
+import { User } from '../../domain/entities/user.entity';
 import type { IUserRepository } from '../../domain/repositories/user.repository.interface';
+import { PasswordHash } from '../../domain/values/password-hash';
 import type { ICreateJwtService } from '../auth/create-jwt.service';
 import { TOKENS } from '../di/tokens';
 import {
@@ -16,16 +14,21 @@ import { RegisterUserUseCase } from './register-user.service';
 
 describe('RegisterUserUseCase（ユーザー登録）', () => {
   const fixedNow = new Date('2025-01-01T00:00:00.000Z');
+  const passwordHash = PasswordHash.reconstruct('salt:hash');
 
-  const makeRecord = (override?: Partial<UserRecord>): UserRecord => ({
-    id: 1,
-    email: 'test@example.com',
-    passwordHash: 'salt:hash',
-    name: 'テストユーザー',
-    createdAt: fixedNow,
-    updatedAt: fixedNow,
-    ...override,
-  });
+  const makeUser = (override?: {
+    id?: number;
+    email?: string;
+    name?: string;
+  }) =>
+    User.reconstruct(
+      override?.id ?? 1,
+      override?.email ?? 'test@example.com',
+      passwordHash,
+      override?.name ?? 'テストユーザー',
+      fixedNow,
+      fixedNow,
+    );
 
   const setup = (overrides?: Partial<IUserRepository>) => {
     const createJwtService: ICreateJwtService = {
@@ -34,11 +37,10 @@ describe('RegisterUserUseCase（ユーザー登録）', () => {
 
     const repo: IUserRepository = {
       findByEmail: vi.fn(async (_email: string) => null),
-      create: vi.fn(async (data: CreateUserData) =>
-        makeRecord({
-          email: data.email,
-          name: data.name,
-          passwordHash: data.passwordHash.value,
+      create: vi.fn(async (user: User) =>
+        makeUser({
+          email: user.email,
+          name: user.name,
         }),
       ),
       ...overrides,
@@ -84,7 +86,7 @@ describe('RegisterUserUseCase（ユーザー登録）', () => {
   describe('異常系', () => {
     it('メールアドレスが重複する場合は例外になる', async () => {
       const { useCase } = setup({
-        findByEmail: vi.fn(async () => makeRecord()),
+        findByEmail: vi.fn(async () => makeUser()),
       });
 
       await expect(

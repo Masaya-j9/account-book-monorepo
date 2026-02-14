@@ -7,7 +7,7 @@ import * as Exit from 'effect/Exit';
 import * as Option from 'effect/Option';
 import { inject, injectable } from 'inversify';
 
-import type { PublicUserRecord } from '../../domain/entities/user.entity';
+import { type PublicUserRecord, User } from '../../domain/entities/user.entity';
 import type { IUserRepository } from '../../domain/repositories/user.repository.interface';
 import { Password } from '../../domain/values/password';
 import { PasswordHash } from '../../domain/values/password-hash';
@@ -35,12 +35,6 @@ type PasswordValidatedInput = {
   email: string;
   name: string;
   password: Password;
-};
-
-type NewUserInput = {
-  email: string;
-  name: string;
-  passwordHash: PasswordHash;
 };
 
 @injectable()
@@ -146,27 +140,27 @@ export class RegisterUserUseCase {
     input: PasswordValidatedInput,
   ): Effect.Effect<PublicUserRecord, RegisterUserError> {
     return pipe(
-      Effect.promise(() => this.toNewUserInput(input)),
+      Effect.promise(() => this.toNewUserEntity(input)),
       Effect.mapError((cause) =>
         this.createUnexpectedError(
-          'パスワードのハッシュ化に失敗しました',
+          'ユーザーエンティティの生成に失敗しました',
           cause,
         ),
       ),
-      Effect.flatMap((newUser) =>
+      Effect.flatMap((user) =>
         pipe(
-          Effect.promise(() => this.userRepository.create(newUser)),
+          Effect.promise(() => this.userRepository.create(user)),
           Effect.mapError((cause) =>
             this.createUnexpectedError('ユーザーの作成に失敗しました', cause),
           ),
         ),
       ),
-      Effect.map((record) => ({
-        id: record.id,
-        email: record.email,
-        name: record.name,
-        createdAt: record.createdAt,
-        updatedAt: record.updatedAt,
+      Effect.map((user) => ({
+        id: Number(user.id),
+        email: user.email,
+        name: user.name,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       })),
     );
   }
@@ -191,16 +185,10 @@ export class RegisterUserUseCase {
     );
   }
 
-  private async toNewUserInput(
-    input: PasswordValidatedInput,
-  ): Promise<NewUserInput> {
+  private async toNewUserEntity(input: PasswordValidatedInput): Promise<User> {
     const passwordHash = await PasswordHash.create(input.password.value);
 
-    return {
-      email: input.email,
-      name: input.name,
-      passwordHash,
-    };
+    return User.create(input.email, passwordHash, input.name);
   }
 
   private createUnexpectedError<T>(
