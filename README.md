@@ -6,16 +6,14 @@
 
 ### ディレクトリ構造
 
-```
-account-book-app/
-├── apps/
-│   ├── frontend/          # Next.jsフロントエンドアプリケーション
-│   └── backend/           # Honoバックエンドアプリケーション
-├── packages/
-│   ├── shared/            # フロントエンドとバックエンドで共有するコード
-│   └── db/                # データベース関連のパッケージ
-└── package.json           # ルートのpackage.json（ワークスペース設定）
-```
+概要:
+
+- `apps/frontend`: Next.js フロントエンドアプリケーション
+- `apps/backend`: Hono バックエンドアプリケーション
+- `packages/shared`: フロントエンド/バックエンドの共有コード
+- `packages/db`: データベース関連パッケージ
+
+詳細なモノレポ構造は `docs/monorepo-structure.md` を参照してください。
 
 ## 技術スタック
 

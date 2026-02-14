@@ -58,6 +58,10 @@ applyTo: "apps/backend/**"
 
 - `apps/backend`: Hono + TypeScript
 
+### 参照ドキュメント
+
+- モノレポ構造: `docs/monorepo-structure.md`
+
 ### コーディング規約
 
 - Biome を使用した Lint と Format

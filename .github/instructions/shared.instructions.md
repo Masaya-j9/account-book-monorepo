@@ -8,6 +8,10 @@ applyTo: "packages/shared/**,packages/db/**"
 - `packages/shared`: 共有型定義とユーティリティ
 - `packages/db`: DB スキーマ/エンティティ定義
 
+## 参照ドキュメント
+
+- モノレポ構造: `docs/monorepo-structure.md`
+
 ## 共有型（packages/shared）ガードレール
 
 - 共有型はフロントエンド/バックエンドの双方で利用できる設計にする
