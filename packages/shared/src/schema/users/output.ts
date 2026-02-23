@@ -1,10 +1,10 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import { userPublicSchema } from "./commonSchema";
+import { userPublicSchema } from './commonSchema';
 
 const authOutputSchema = z.object({
-	token: z.string().min(1),
-	user: userPublicSchema,
+  token: z.string().min(1),
+  user: userPublicSchema,
 });
 
 export const usersRegisterOutputSchema = authOutputSchema;
