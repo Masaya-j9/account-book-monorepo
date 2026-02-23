@@ -47,6 +47,10 @@
 - **Drizzle ORM** - TypeScript ファーストの軽量 ORM
 - 型安全なデータベースクエリとマイグレーション管理
 
+### オブジェクトストレージ
+
+- **RustFS** - Rust 製の S3 互換オブジェクトストレージ
+
 ### 共通パッケージ (`packages/shared`)
 
 - **Zod** - スキーマバリデーション
@@ -79,14 +83,17 @@ pnpm install
 Docker Compose を使用すると、PostgreSQL を簡単にセットアップできます。
 
 ```shell
-# PostgreSQLコンテナを起動
+# コンテナをすべて起動（PostgreSQL・pgAdmin・RustFS）
 docker compose up -d
 
 # コンテナの状態を確認
 docker compose ps
 
-# ログを確認
+# ログを確認（PostgreSQL）
 docker compose logs postgres
+
+# ログを確認（RustFS）
+docker compose logs rustfs
 
 # コンテナを停止
 docker compose down
@@ -107,6 +114,26 @@ cp .env.example .env
 デフォルトの接続情報：
 
 - **接続 URL**: `postgresql://postgres:postgres@localhost:5432/account_book_app`
+
+#### オブジェクトストレージ（RustFS）の操作
+
+RustFS は S3 互換の API を提供します。
+
+**Web コンソール（管理画面）へのアクセス:**
+
+ブラウザで http://localhost:9001 を開き、以下の認証情報でログインします。
+
+| 項目 | デフォルト値 |
+|------|------------|
+| Access Key（ユーザー名） | `minioadmin` |
+| Secret Key（パスワード） | `minioadmin` |
+
+認証情報を変更する場合は `.env` に以下を追加してください：
+
+```env
+RUSTFS_ACCESS_KEY=${任意で追加する}
+RUSTFS_SECRET_KEY=${任意で追加する}
+```
 
 
 #### 環境変数の設定
@@ -150,6 +177,9 @@ pnpm exec turbo run dev --filter=backend
 
 - **フロントエンド**: http://localhost:3000
 - **バックエンド**: http://localhost:4000
+- **pgAdmin（DB 管理画面）**: http://localhost:8080
+- **RustFS Web コンソール（オブジェクト管理画面）**: http://localhost:9001
+- **RustFS S3 API エンドポイント**: http://localhost:9000
 
 バックエンドの簡易動作確認（ヘルスチェック）：
 
