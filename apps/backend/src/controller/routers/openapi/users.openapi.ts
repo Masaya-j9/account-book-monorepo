@@ -36,8 +36,9 @@ const errorResponseSchema = z.object({
   message: z.string(),
 });
 
-type ErrorStatus = 400 | 409 | 500;
-type LoginErrorStatus = 400 | 500;
+type RegisterErrorStatus = 400 | 409 | 500;
+type LoginErrorStatus = 401 | 500;
+type ErrorStatus = RegisterErrorStatus | LoginErrorStatus;
 
 type HttpError<S extends ErrorStatus = ErrorStatus> = {
   status: S;
@@ -52,7 +53,9 @@ const respondError = <S extends ErrorStatus, E extends Env, P extends string>(
 const normalizeError = <T>(cause: T) =>
   cause instanceof Error ? cause : new Error(String(cause));
 
-const toRegisterUserHttpError = <T>(cause: T): HttpError => {
+const toRegisterUserHttpError = <T>(
+  cause: T,
+): HttpError<RegisterErrorStatus> => {
   const error = normalizeError(cause);
 
   if (
@@ -74,7 +77,7 @@ const toLoginUserHttpError = <T>(cause: T): HttpError<LoginErrorStatus> => {
   const error = normalizeError(cause);
 
   if (error instanceof InvalidCredentialsError) {
-    return { status: 400, message: error.message };
+    return { status: 401, message: error.message };
   }
 
   return { status: 500, message: 'ログインに失敗しました' };
@@ -153,7 +156,7 @@ const loginUserRoute = createRoute({
         },
       },
     },
-    400: {
+    401: {
       description: '認証情報が不正',
       content: {
         'application/json': {
