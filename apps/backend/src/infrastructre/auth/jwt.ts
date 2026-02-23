@@ -2,6 +2,10 @@ import { sign, verify } from 'hono/jwt';
 import { injectable } from 'inversify';
 
 import type { ICreateJwtTokenProvider } from '../../services/auth/create-jwt.service';
+import type {
+  IVerifyJwtTokenProvider,
+  VerifiedTokenPayload,
+} from '../../services/auth/verify-jwt.service';
 import { Data, Effect } from '../../shared/result';
 
 const JWT_SECRET_ENV_KEY = 'JWT_SECRET';
@@ -154,5 +158,12 @@ export const verifyAccessTokenEffect = (
 export class CreateJwtProvider implements ICreateJwtTokenProvider {
   create(params: { userId: number; email: string }): Promise<string> {
     return createAccessToken(params);
+  }
+}
+
+@injectable()
+export class VerifyJwtProvider implements IVerifyJwtTokenProvider {
+  verify(token: string): Promise<VerifiedTokenPayload> {
+    return verifyAccessToken(token);
   }
 }

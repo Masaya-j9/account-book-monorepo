@@ -17,4 +17,5 @@ export const TOKENS = {
   TokenBlacklistRepository: Symbol.for('TokenBlacklistRepository'),
   CreateJwtService: Symbol.for('CreateJwtService'),
   CreateJwtTokenProvider: Symbol.for('CreateJwtTokenProvider'),
+  VerifyJwtTokenProvider: Symbol.for('VerifyJwtTokenProvider'),
 } as const;

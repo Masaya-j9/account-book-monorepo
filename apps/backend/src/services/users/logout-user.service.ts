@@ -2,7 +2,7 @@ import type { UsersLogoutOutput } from '@account-book-app/shared';
 import { inject, injectable } from 'inversify';
 
 import type { ITokenBlacklistRepository } from '../../domain/repositories/token-blacklist.repository.interface';
-import { verifyAccessToken } from '../../infrastructre/auth/jwt';
+import type { IVerifyJwtTokenProvider } from '../auth/verify-jwt.service';
 import { TOKENS } from '../di/tokens';
 import { UnexpectedLogoutUserError } from './logout-user.errors';
 
@@ -11,9 +11,12 @@ export class LogoutUserUseCase {
   @inject(TOKENS.TokenBlacklistRepository)
   private tokenBlacklistRepository!: ITokenBlacklistRepository;
 
+  @inject(TOKENS.VerifyJwtTokenProvider)
+  private verifyJwtTokenProvider!: IVerifyJwtTokenProvider;
+
   async execute(params: { token: string }): Promise<UsersLogoutOutput> {
     try {
-      const payload = await verifyAccessToken(params.token);
+      const payload = await this.verifyJwtTokenProvider.verify(params.token);
       const tokenIdentifier = `${payload.sub}:${payload.iat}`;
 
       await this.tokenBlacklistRepository.add({

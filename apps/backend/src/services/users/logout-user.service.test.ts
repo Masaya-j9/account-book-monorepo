@@ -1,27 +1,31 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ITokenBlacklistRepository } from '../../domain/repositories/token-blacklist.repository.interface';
+import type {
+  IVerifyJwtTokenProvider,
+  VerifiedTokenPayload,
+} from '../auth/verify-jwt.service';
 import { UnexpectedLogoutUserError } from './logout-user.errors';
 import { LogoutUserUseCase } from './logout-user.service';
 
-// verifyAccessToken をモック
-vi.mock('../../infrastructre/auth/jwt', () => ({
-  verifyAccessToken: vi.fn(),
-}));
-
-import { verifyAccessToken } from '../../infrastructre/auth/jwt';
-
-const verifyAccessTokenMock = vi.mocked(verifyAccessToken);
+const makeVerifyProvider = (): IVerifyJwtTokenProvider => ({
+  verify: vi.fn(),
+});
 
 const makeRepo = (): ITokenBlacklistRepository => ({
   add: vi.fn().mockResolvedValue(undefined),
   exists: vi.fn().mockResolvedValue(false),
 });
 
-// InversifyJS の @inject を使わずに直接プロパティにリポジトリを注入してテスト
-const makeUseCase = (repo: ITokenBlacklistRepository) => {
+// InversifyJS の @inject を使わずに直接プロパティに注入してテスト
+const makeUseCase = (
+  repo: ITokenBlacklistRepository,
+  verifyProvider: IVerifyJwtTokenProvider,
+) => {
   const useCase = new LogoutUserUseCase();
-  // private フィールドへのアクセス（テスト用途）
-  Object.assign(useCase, { tokenBlacklistRepository: repo });
+  Object.assign(useCase, {
+    tokenBlacklistRepository: repo,
+    verifyJwtTokenProvider: verifyProvider,
+  });
   return useCase;
 };
 
@@ -42,14 +46,17 @@ describe('LogoutUserUseCase', () => {
         iat: 1740000000,
         exp: 1740086400,
       };
-      verifyAccessTokenMock.mockResolvedValueOnce(payload);
+      const verifyProvider = makeVerifyProvider();
+      vi.mocked(verifyProvider.verify).mockResolvedValueOnce(
+        payload as VerifiedTokenPayload,
+      );
 
       const repo = makeRepo();
-      const useCase = makeUseCase(repo);
+      const useCase = makeUseCase(repo, verifyProvider);
 
       const result = await useCase.execute({ token: 'valid.jwt.token' });
 
-      expect(verifyAccessTokenMock).toHaveBeenCalledWith('valid.jwt.token');
+      expect(verifyProvider.verify).toHaveBeenCalledWith('valid.jwt.token');
       expect(repo.add).toHaveBeenCalledWith({
         tokenIdentifier: '42:1740000000',
         userId: 42,
@@ -61,12 +68,13 @@ describe('LogoutUserUseCase', () => {
 
   describe('異常系', () => {
     it('JWT 検証に失敗すると UnexpectedLogoutUserError をスローする', async () => {
-      verifyAccessTokenMock.mockRejectedValueOnce(
+      const verifyProvider = makeVerifyProvider();
+      vi.mocked(verifyProvider.verify).mockRejectedValueOnce(
         new Error('invalid signature'),
       );
 
       const repo = makeRepo();
-      const useCase = makeUseCase(repo);
+      const useCase = makeUseCase(repo, verifyProvider);
 
       await expect(useCase.execute({ token: 'invalid.token' })).rejects.toThrow(
         UnexpectedLogoutUserError,
@@ -74,17 +82,18 @@ describe('LogoutUserUseCase', () => {
     });
 
     it('リポジトリへの追加に失敗すると UnexpectedLogoutUserError をスローする', async () => {
-      const payload = {
+      const payload: VerifiedTokenPayload = {
         sub: '42',
         email: 'user@example.com',
         iat: 1740000000,
         exp: 1740086400,
       };
-      verifyAccessTokenMock.mockResolvedValueOnce(payload);
+      const verifyProvider = makeVerifyProvider();
+      vi.mocked(verifyProvider.verify).mockResolvedValueOnce(payload);
 
       const repo = makeRepo();
       vi.mocked(repo.add).mockRejectedValueOnce(new Error('DB 接続エラー'));
-      const useCase = makeUseCase(repo);
+      const useCase = makeUseCase(repo, verifyProvider);
 
       await expect(
         useCase.execute({ token: 'valid.jwt.token' }),
