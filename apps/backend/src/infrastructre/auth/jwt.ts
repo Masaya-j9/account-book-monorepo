@@ -6,6 +6,7 @@ import type {
   IVerifyJwtTokenProvider,
   VerifiedTokenPayload,
 } from '../../services/auth/verify-jwt.service';
+import { VerifyJwtAuthError } from '../../services/auth/verify-jwt.service';
 import { Data, Effect } from '../../shared/result';
 
 const JWT_SECRET_ENV_KEY = 'JWT_SECRET';
@@ -163,7 +164,17 @@ export class CreateJwtProvider implements ICreateJwtTokenProvider {
 
 @injectable()
 export class VerifyJwtProvider implements IVerifyJwtTokenProvider {
-  verify(token: string): Promise<VerifiedTokenPayload> {
-    return verifyAccessToken(token);
+  async verify(token: string): Promise<VerifiedTokenPayload> {
+    try {
+      return await verifyAccessToken(token);
+    } catch (cause) {
+      const error = toJwtVerifyError(cause);
+      if (error instanceof JwtTokenVerificationUnexpectedError) {
+        // サーバー設定起因などの予期しないエラーはそのまま伝播させる（500 扱い）
+        throw new Error(error.message, { cause: error.cause });
+      }
+      // Expired / Invalid / Malformed はすべて認証失敗（401 扱い）
+      throw new VerifyJwtAuthError(error.message, { cause: error.cause });
+    }
   }
 }

@@ -1,5 +1,16 @@
 import { DomainError } from '../../domain/values/domain-error';
 
+export class LogoutUserAuthError extends DomainError {
+  public readonly cause?: Error;
+
+  constructor(params: { message: string; cause?: Error }) {
+    super(params.message, 'LogoutUserAuthError');
+    if (params.cause) {
+      this.cause = params.cause;
+    }
+  }
+}
+
 export class UnexpectedLogoutUserError extends DomainError {
   public readonly cause?: Error;
 
@@ -11,4 +22,4 @@ export class UnexpectedLogoutUserError extends DomainError {
   }
 }
 
-export type LogoutUserError = UnexpectedLogoutUserError;
+export type LogoutUserError = LogoutUserAuthError | UnexpectedLogoutUserError;

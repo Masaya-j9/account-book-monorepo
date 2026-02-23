@@ -3,8 +3,12 @@ import { inject, injectable } from 'inversify';
 
 import type { ITokenBlacklistRepository } from '../../domain/repositories/token-blacklist.repository.interface';
 import type { IVerifyJwtTokenProvider } from '../auth/verify-jwt.service';
+import { VerifyJwtAuthError } from '../auth/verify-jwt.service';
 import { TOKENS } from '../di/tokens';
-import { UnexpectedLogoutUserError } from './logout-user.errors';
+import {
+  LogoutUserAuthError,
+  UnexpectedLogoutUserError,
+} from './logout-user.errors';
 
 @injectable()
 export class LogoutUserUseCase {
@@ -27,6 +31,12 @@ export class LogoutUserUseCase {
 
       return { success: true };
     } catch (cause) {
+      if (cause instanceof VerifyJwtAuthError) {
+        throw new LogoutUserAuthError({
+          message: cause.message,
+          cause,
+        });
+      }
       throw new UnexpectedLogoutUserError({
         message: 'ログアウトに失敗しました',
         cause: cause instanceof Error ? cause : new Error(String(cause)),

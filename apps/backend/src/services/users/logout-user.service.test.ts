@@ -4,7 +4,11 @@ import type {
   IVerifyJwtTokenProvider,
   VerifiedTokenPayload,
 } from '../auth/verify-jwt.service';
-import { UnexpectedLogoutUserError } from './logout-user.errors';
+import { VerifyJwtAuthError } from '../auth/verify-jwt.service';
+import {
+  LogoutUserAuthError,
+  UnexpectedLogoutUserError,
+} from './logout-user.errors';
 import { LogoutUserUseCase } from './logout-user.service';
 
 const makeVerifyProvider = (): IVerifyJwtTokenProvider => ({
@@ -67,16 +71,30 @@ describe('LogoutUserUseCase', () => {
   });
 
   describe('異常系', () => {
-    it('JWT 検証に失敗すると UnexpectedLogoutUserError をスローする', async () => {
+    it('VerifyJwtAuthError がスローされると LogoutUserAuthError をスローする', async () => {
       const verifyProvider = makeVerifyProvider();
       vi.mocked(verifyProvider.verify).mockRejectedValueOnce(
-        new Error('invalid signature'),
+        new VerifyJwtAuthError('JWTの有効期限が切れています'),
       );
 
       const repo = makeRepo();
       const useCase = makeUseCase(repo, verifyProvider);
 
-      await expect(useCase.execute({ token: 'invalid.token' })).rejects.toThrow(
+      await expect(useCase.execute({ token: 'expired.token' })).rejects.toThrow(
+        LogoutUserAuthError,
+      );
+    });
+
+    it('VerifyJwtAuthError 以外のエラーは UnexpectedLogoutUserError をスローする', async () => {
+      const verifyProvider = makeVerifyProvider();
+      vi.mocked(verifyProvider.verify).mockRejectedValueOnce(
+        new Error('JWT_SECRET が設定されていません'),
+      );
+
+      const repo = makeRepo();
+      const useCase = makeUseCase(repo, verifyProvider);
+
+      await expect(useCase.execute({ token: 'any.token' })).rejects.toThrow(
         UnexpectedLogoutUserError,
       );
     });

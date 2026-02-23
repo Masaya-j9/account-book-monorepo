@@ -14,7 +14,10 @@ import { createRequestContainer } from '../../../infrastructre/di/container';
 import { TOKENS } from '../../../services/di/tokens';
 import { InvalidCredentialsError } from '../../../services/users/login-user.errors';
 import type { LoginUserUseCase } from '../../../services/users/login-user.service';
-import { UnexpectedLogoutUserError } from '../../../services/users/logout-user.errors';
+import {
+  LogoutUserAuthError,
+  UnexpectedLogoutUserError,
+} from '../../../services/users/logout-user.errors';
 import type { LogoutUserUseCase } from '../../../services/users/logout-user.service';
 import {
   EmailAlreadyExistsError,
@@ -94,6 +97,10 @@ const toLoginUserHttpError = <T>(cause: T): HttpError<LoginErrorStatus> => {
 
 const toLogoutUserHttpError = <T>(cause: T): HttpError<LogoutErrorStatus> => {
   const error = normalizeError(cause);
+
+  if (error instanceof LogoutUserAuthError) {
+    return { status: 401, message: error.message };
+  }
 
   if (error instanceof UnexpectedLogoutUserError) {
     return { status: 500, message: error.message };
