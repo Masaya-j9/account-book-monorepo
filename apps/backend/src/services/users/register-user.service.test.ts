@@ -37,6 +37,7 @@ describe('RegisterUserUseCase（ユーザー登録）', () => {
 
     const repo: IUserRepository = {
       findByEmail: vi.fn(async (_email: string) => null),
+      existsByEmail: vi.fn(async (_email: string) => false),
       create: vi.fn(async (user: User) =>
         makeUser({
           email: user.email,
@@ -74,7 +75,7 @@ describe('RegisterUserUseCase（ユーザー登録）', () => {
         password: 'VeryStrong#123',
       });
 
-      expect(repo.findByEmail).toHaveBeenCalledWith('newuser@example.com');
+      expect(repo.existsByEmail).toHaveBeenCalledWith('newuser@example.com');
       expect(repo.create).toHaveBeenCalled();
       expect(createJwtService.create).toHaveBeenCalled();
       expect(result.user.email).toBe('newuser@example.com');
@@ -86,7 +87,7 @@ describe('RegisterUserUseCase（ユーザー登録）', () => {
   describe('異常系', () => {
     it('メールアドレスが重複する場合は例外になる', async () => {
       const { useCase } = setup({
-        findByEmail: vi.fn(async () => makeUser()),
+        existsByEmail: vi.fn(async () => true),
       });
 
       await expect(

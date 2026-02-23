@@ -120,15 +120,15 @@ export class RegisterUserUseCase {
     input: PasswordValidatedInput,
   ): Effect.Effect<PasswordValidatedInput, RegisterUserError> {
     return pipe(
-      Effect.promise(() => this.userRepository.findByEmail(input.email)),
+      Effect.promise(() => this.userRepository.existsByEmail(input.email)),
       Effect.mapError((cause) =>
         this.createUnexpectedError('ユーザー情報の取得に失敗しました', cause),
       ),
-      Effect.flatMap((record) =>
+      Effect.flatMap((exists) =>
         pipe(
           Effect.succeed(input),
           Effect.filterOrFail(
-            () => record === null,
+            () => !exists,
             () => new EmailAlreadyExistsError(input.email),
           ),
         ),

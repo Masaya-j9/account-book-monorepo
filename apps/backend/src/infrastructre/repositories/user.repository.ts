@@ -27,6 +27,16 @@ export class UserRepository implements IUserRepository {
     return record ? this.toEntity(record) : null;
   }
 
+  async existsByEmail(email: string): Promise<boolean> {
+    const [record] = await this.db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    return record !== undefined;
+  }
+
   async create(user: User): Promise<User> {
     const [record] = await this.db
       .insert(users)
