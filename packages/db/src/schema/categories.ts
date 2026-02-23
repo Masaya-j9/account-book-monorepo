@@ -6,7 +6,7 @@ import {
 	timestamp,
 	varchar,
 } from "drizzle-orm/pg-core";
-import { transactionTypes } from "./transaction-types.js";
+import { transactionTypes } from "./transaction-types";
 
 export const categories = pgTable("categories", {
 	id: serial("id").primaryKey(),
