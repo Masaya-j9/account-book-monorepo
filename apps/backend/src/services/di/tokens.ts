@@ -12,6 +12,7 @@ export const TOKENS = {
   UpdateTransactionUseCase: Symbol.for('UpdateTransactionUseCase'),
   DeleteTransactionUseCase: Symbol.for('DeleteTransactionUseCase'),
   RegisterUserUseCase: Symbol.for('RegisterUserUseCase'),
+  LoginUserUseCase: Symbol.for('LoginUserUseCase'),
   CreateJwtService: Symbol.for('CreateJwtService'),
   CreateJwtTokenProvider: Symbol.for('CreateJwtTokenProvider'),
 } as const;

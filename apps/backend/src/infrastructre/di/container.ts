@@ -15,6 +15,7 @@ import { CreateTransactionUseCase } from '../../services/transactions/create-tra
 import { DeleteTransactionUseCase } from '../../services/transactions/delete-transaction.service';
 import { ListTransactionsUseCase } from '../../services/transactions/list-transactions.service';
 import { UpdateTransactionUseCase } from '../../services/transactions/update-transaction.service';
+import { LoginUserUseCase } from '../../services/users/login-user.service';
 import { RegisterUserUseCase } from '../../services/users/register-user.service';
 import { CreateJwtProvider } from '../auth/jwt';
 import { CategoryRepository } from '../repositories/category.repository';
@@ -71,6 +72,10 @@ export const createRequestContainer = (db: NodePgDatabase) => {
   container
     .bind<RegisterUserUseCase>(TOKENS.RegisterUserUseCase)
     .to(RegisterUserUseCase);
+
+  container
+    .bind<LoginUserUseCase>(TOKENS.LoginUserUseCase)
+    .to(LoginUserUseCase);
 
   container
     .bind<CreateJwtProvider>(TOKENS.CreateJwtTokenProvider)

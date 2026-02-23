@@ -1,5 +1,7 @@
 import type { NodePgDatabase } from '@account-book-app/db';
 import {
+  usersLoginInputSchema,
+  usersLoginOutputSchema,
   usersRegisterInputSchema,
   usersRegisterOutputSchema,
 } from '@account-book-app/shared';
@@ -9,6 +11,8 @@ import type { Context, Env } from 'hono';
 
 import { createRequestContainer } from '../../../infrastructre/di/container';
 import { TOKENS } from '../../../services/di/tokens';
+import { InvalidCredentialsError } from '../../../services/users/login-user.errors';
+import type { LoginUserUseCase } from '../../../services/users/login-user.service';
 import {
   EmailAlreadyExistsError,
   InvalidPasswordError,
@@ -23,11 +27,18 @@ const resolveRegisterUserUseCase = (db: NodePgDatabase) => {
   return container.get<RegisterUserUseCase>(TOKENS.RegisterUserUseCase);
 };
 
+const resolveLoginUserUseCase = (db: NodePgDatabase) => {
+  const container = createRequestContainer(db);
+  return container.get<LoginUserUseCase>(TOKENS.LoginUserUseCase);
+};
+
 const errorResponseSchema = z.object({
   message: z.string(),
 });
 
-type ErrorStatus = 400 | 409 | 500;
+type RegisterErrorStatus = 400 | 409 | 500;
+type LoginErrorStatus = 401 | 500;
+type ErrorStatus = RegisterErrorStatus | LoginErrorStatus;
 
 type HttpError<S extends ErrorStatus = ErrorStatus> = {
   status: S;
@@ -42,7 +53,9 @@ const respondError = <S extends ErrorStatus, E extends Env, P extends string>(
 const normalizeError = <T>(cause: T) =>
   cause instanceof Error ? cause : new Error(String(cause));
 
-const toRegisterUserHttpError = <T>(cause: T): HttpError => {
+const toRegisterUserHttpError = <T>(
+  cause: T,
+): HttpError<RegisterErrorStatus> => {
   const error = normalizeError(cause);
 
   if (
@@ -58,6 +71,16 @@ const toRegisterUserHttpError = <T>(cause: T): HttpError => {
   }
 
   return { status: 500, message: 'ユーザー登録に失敗しました' };
+};
+
+const toLoginUserHttpError = <T>(cause: T): HttpError<LoginErrorStatus> => {
+  const error = normalizeError(cause);
+
+  if (error instanceof InvalidCredentialsError) {
+    return { status: 401, message: error.message };
+  }
+
+  return { status: 500, message: 'ログインに失敗しました' };
 };
 
 const registerUserRoute = createRoute({
@@ -110,6 +133,48 @@ const registerUserRoute = createRoute({
   },
 });
 
+const loginUserRoute = createRoute({
+  method: 'post',
+  path: '/users/login',
+  tags: ['users'],
+  request: {
+    body: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: usersLoginInputSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'ログイン成功',
+      content: {
+        'application/json': {
+          schema: usersLoginOutputSchema,
+        },
+      },
+    },
+    401: {
+      description: '認証情報が不正',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    500: {
+      description: 'サーバーエラー',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
 export const registerUsersOpenApi = (app: OpenAPIHono, db: NodePgDatabase) => {
   app.openapi(registerUserRoute, async (c) => {
     const input = c.req.valid('json');
@@ -129,6 +194,29 @@ export const registerUsersOpenApi = (app: OpenAPIHono, db: NodePgDatabase) => {
         Effect.match({
           onFailure: (error) => respondError(c, error),
           onSuccess: (result) => c.json(result, 201),
+        }),
+      ),
+    );
+  });
+
+  app.openapi(loginUserRoute, async (c) => {
+    const input = c.req.valid('json');
+    const loginUserUseCase = resolveLoginUserUseCase(db);
+
+    return Effect.runPromise(
+      pipe(
+        Effect.tryPromise({
+          try: () =>
+            loginUserUseCase.execute({
+              email: input.email,
+              name: input.name,
+              password: input.password,
+            }),
+          catch: (cause) => toLoginUserHttpError(cause),
+        }),
+        Effect.match({
+          onFailure: (error) => respondError(c, error),
+          onSuccess: (result) => c.json(result, 200),
         }),
       ),
     );

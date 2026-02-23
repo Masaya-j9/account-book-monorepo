@@ -35,3 +35,22 @@ export const usersRegisterInputSchema = z.object({
 });
 
 export type UsersRegisterInput = z.infer<typeof usersRegisterInputSchema>;
+
+export const usersLoginInputSchema = z.object({
+  email: z
+    .email('メールアドレスの形式が不正です')
+    .max(
+      USER_EMAIL_MAX_LENGTH,
+      `メールアドレスは${USER_EMAIL_MAX_LENGTH}文字以内である必要があります`,
+    ),
+  name: z
+    .string()
+    .min(1, 'ユーザー名は必須です')
+    .max(
+      USER_NAME_MAX_LENGTH,
+      `ユーザー名は${USER_NAME_MAX_LENGTH}文字以内である必要があります`,
+    ),
+  password: z.string().min(1, 'パスワードは必須です'),
+});
+
+export type UsersLoginInput = z.infer<typeof usersLoginInputSchema>;

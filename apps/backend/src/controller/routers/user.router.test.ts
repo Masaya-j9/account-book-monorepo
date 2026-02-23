@@ -2,6 +2,7 @@ import type { NodePgDatabase } from '@account-book-app/db';
 import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TOKENS } from '../../services/di/tokens';
+import { InvalidCredentialsError } from '../../services/users/login-user.errors';
 import {
   EmailAlreadyExistsError,
   InvalidPasswordError,
@@ -117,6 +118,84 @@ describe('userRouter（ユーザールーター）', () => {
       expect(error).toMatchObject({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'ユーザー登録に失敗しました',
+      });
+    });
+  });
+});
+
+describe('userRouter - login（ログイン）', () => {
+  const db = {} as NodePgDatabase;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('正常系', () => {
+    it('正しい認証情報でログインするとトークンとユーザーを返す', async () => {
+      executeMock.mockResolvedValueOnce({
+        token: 'jwt-token',
+        user: {
+          id: 1,
+          email: 'user@example.com',
+          name: 'テストユーザー',
+          createdAt: new Date('2025-01-01T00:00:00.000Z'),
+          updatedAt: new Date('2025-01-01T00:00:00.000Z'),
+        },
+      });
+
+      const caller = userRouter.createCaller({ db });
+
+      const result = await caller.login({
+        email: 'user@example.com',
+        name: 'テストユーザー',
+        password: 'VeryStrong#123',
+      });
+
+      expect(createRequestContainerMock).toHaveBeenCalledWith(db);
+      expect(getMock).toHaveBeenCalledWith(TOKENS.LoginUserUseCase);
+      expect(executeMock).toHaveBeenCalledWith({
+        email: 'user@example.com',
+        name: 'テストユーザー',
+        password: 'VeryStrong#123',
+      });
+      expect(result.token).toBe('jwt-token');
+      expect(result.user.email).toBe('user@example.com');
+    });
+  });
+
+  describe('異常系', () => {
+    it('認証情報が誤っている場合は UNAUTHORIZED になる', async () => {
+      executeMock.mockRejectedValueOnce(new InvalidCredentialsError());
+
+      const caller = userRouter.createCaller({ db });
+
+      await expect(
+        caller.login({
+          email: 'user@example.com',
+          name: 'テストユーザー',
+          password: 'WrongPassword#999',
+        }),
+      ).rejects.toMatchObject({
+        code: 'UNAUTHORIZED',
+      });
+    });
+
+    it('想定外の例外は INTERNAL_SERVER_ERROR になる', async () => {
+      executeMock.mockRejectedValueOnce(new Error('boom'));
+
+      const caller = userRouter.createCaller({ db });
+      const error = await caller
+        .login({
+          email: 'user@example.com',
+          name: 'テストユーザー',
+          password: 'VeryStrong#123',
+        })
+        .catch((e) => e);
+
+      expect(error).toBeInstanceOf(TRPCError);
+      expect(error).toMatchObject({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'ログインに失敗しました',
       });
     });
   });
