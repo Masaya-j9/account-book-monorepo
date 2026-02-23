@@ -2,6 +2,7 @@ import type { NodePgDatabase } from '@account-book-app/db';
 import {
   usersLoginInputSchema,
   usersLoginOutputSchema,
+  usersLogoutOutputSchema,
   usersRegisterInputSchema,
   usersRegisterOutputSchema,
 } from '@account-book-app/shared';
@@ -13,6 +14,11 @@ import { createRequestContainer } from '../../../infrastructre/di/container';
 import { TOKENS } from '../../../services/di/tokens';
 import { InvalidCredentialsError } from '../../../services/users/login-user.errors';
 import type { LoginUserUseCase } from '../../../services/users/login-user.service';
+import {
+  LogoutUserAuthError,
+  UnexpectedLogoutUserError,
+} from '../../../services/users/logout-user.errors';
+import type { LogoutUserUseCase } from '../../../services/users/logout-user.service';
 import {
   EmailAlreadyExistsError,
   InvalidPasswordError,
@@ -32,13 +38,19 @@ const resolveLoginUserUseCase = (db: NodePgDatabase) => {
   return container.get<LoginUserUseCase>(TOKENS.LoginUserUseCase);
 };
 
+const resolveLogoutUserUseCase = (db: NodePgDatabase) => {
+  const container = createRequestContainer(db);
+  return container.get<LogoutUserUseCase>(TOKENS.LogoutUserUseCase);
+};
+
 const errorResponseSchema = z.object({
   message: z.string(),
 });
 
 type RegisterErrorStatus = 400 | 409 | 500;
 type LoginErrorStatus = 401 | 500;
-type ErrorStatus = RegisterErrorStatus | LoginErrorStatus;
+type LogoutErrorStatus = 401 | 500;
+type ErrorStatus = RegisterErrorStatus | LoginErrorStatus | LogoutErrorStatus;
 
 type HttpError<S extends ErrorStatus = ErrorStatus> = {
   status: S;
@@ -83,6 +95,28 @@ const toLoginUserHttpError = <T>(cause: T): HttpError<LoginErrorStatus> => {
   return { status: 500, message: 'ログインに失敗しました' };
 };
 
+const toLogoutUserHttpError = <T>(cause: T): HttpError<LogoutErrorStatus> => {
+  const error = normalizeError(cause);
+
+  if (error instanceof LogoutUserAuthError) {
+    return { status: 401, message: error.message };
+  }
+
+  if (error instanceof UnexpectedLogoutUserError) {
+    return { status: 500, message: error.message };
+  }
+
+  return { status: 500, message: 'ログアウトに失敗しました' };
+};
+
+const getBearerToken = (
+  authorization: string | undefined,
+): string | undefined => {
+  if (!authorization) return undefined;
+  const [scheme, token] = authorization.split(' ');
+  return scheme?.toLowerCase() === 'bearer' && token ? token : undefined;
+};
+
 const registerUserRoute = createRoute({
   method: 'post',
   path: '/users/register',
@@ -116,6 +150,39 @@ const registerUserRoute = createRoute({
     },
     409: {
       description: 'メールアドレス重複',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    500: {
+      description: 'サーバーエラー',
+      content: {
+        'application/json': {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+const logoutUserRoute = createRoute({
+  method: 'post',
+  path: '/users/logout',
+  tags: ['users'],
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: {
+      description: 'ログアウト成功',
+      content: {
+        'application/json': {
+          schema: usersLogoutOutputSchema,
+        },
+      },
+    },
+    401: {
+      description: '未認証',
       content: {
         'application/json': {
           schema: errorResponseSchema,
@@ -213,6 +280,29 @@ export const registerUsersOpenApi = (app: OpenAPIHono, db: NodePgDatabase) => {
               password: input.password,
             }),
           catch: (cause) => toLoginUserHttpError(cause),
+        }),
+        Effect.match({
+          onFailure: (error) => respondError(c, error),
+          onSuccess: (result) => c.json(result, 200),
+        }),
+      ),
+    );
+  });
+
+  app.openapi(logoutUserRoute, async (c) => {
+    const token = getBearerToken(c.req.header('authorization'));
+
+    if (!token) {
+      return c.json({ message: '認証が必要です' }, 401);
+    }
+
+    const logoutUserUseCase = resolveLogoutUserUseCase(db);
+
+    return Effect.runPromise(
+      pipe(
+        Effect.tryPromise({
+          try: () => logoutUserUseCase.execute({ token }),
+          catch: (cause) => toLogoutUserHttpError(cause),
         }),
         Effect.match({
           onFailure: (error) => respondError(c, error),

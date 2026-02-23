@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TOKENS } from '../../../services/di/tokens';
 import { InvalidCredentialsError } from '../../../services/users/login-user.errors';
+import { UnexpectedLogoutUserError } from '../../../services/users/logout-user.errors';
 import {
   EmailAlreadyExistsError,
   InvalidPasswordError,
@@ -242,6 +243,96 @@ describe('registerUsersOpenApi - login（ログイン）', () => {
 
       expect(response.status).toBe(500);
       expect(json).toEqual({ message: 'ログインに失敗しました' });
+    });
+  });
+});
+
+describe('registerUsersOpenApi - logout（ログアウト）', () => {
+  const db = {} as NodePgDatabase;
+
+  const createApp = () => {
+    const app = new OpenAPIHono();
+    registerUsersOpenApi(app, db);
+    return app;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('正常系', () => {
+    it('Bearerトークン付きでリクエストすると{ success: true }と200を返す', async () => {
+      executeMock.mockResolvedValueOnce({ success: true });
+
+      const app = createApp();
+      const response = await app.request('/users/logout', {
+        method: 'POST',
+        headers: { authorization: 'Bearer valid.jwt.token' },
+      });
+      const json = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(createRequestContainerMock).toHaveBeenCalledWith(db);
+      expect(getMock).toHaveBeenCalledWith(TOKENS.LogoutUserUseCase);
+      expect(executeMock).toHaveBeenCalledWith({ token: 'valid.jwt.token' });
+      expect(json).toEqual({ success: true });
+    });
+  });
+
+  describe('異常系', () => {
+    it('Authorizationヘッダーがない場合は401を返す', async () => {
+      const app = createApp();
+      const response = await app.request('/users/logout', {
+        method: 'POST',
+      });
+      const json = await response.json();
+
+      expect(response.status).toBe(401);
+      expect(json).toEqual({ message: '認証が必要です' });
+      expect(executeMock).not.toHaveBeenCalled();
+    });
+
+    it('Bearerトークンが不正形式（schemeのみ）の場合は401を返す', async () => {
+      const app = createApp();
+      const response = await app.request('/users/logout', {
+        method: 'POST',
+        headers: { authorization: 'Bearer' },
+      });
+      const json = await response.json();
+
+      expect(response.status).toBe(401);
+      expect(json).toEqual({ message: '認証が必要です' });
+      expect(executeMock).not.toHaveBeenCalled();
+    });
+
+    it('UnexpectedLogoutUserErrorの場合は500を返す', async () => {
+      executeMock.mockRejectedValueOnce(
+        new UnexpectedLogoutUserError({ message: 'ログアウトに失敗しました' }),
+      );
+
+      const app = createApp();
+      const response = await app.request('/users/logout', {
+        method: 'POST',
+        headers: { authorization: 'Bearer valid.jwt.token' },
+      });
+      const json = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(json).toEqual({ message: 'ログアウトに失敗しました' });
+    });
+
+    it('想定外の例外は500を返す', async () => {
+      executeMock.mockRejectedValueOnce(new Error('boom'));
+
+      const app = createApp();
+      const response = await app.request('/users/logout', {
+        method: 'POST',
+        headers: { authorization: 'Bearer valid.jwt.token' },
+      });
+      const json = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(json).toEqual({ message: 'ログアウトに失敗しました' });
     });
   });
 });

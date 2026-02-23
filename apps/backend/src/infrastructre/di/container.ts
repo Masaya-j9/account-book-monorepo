@@ -3,9 +3,11 @@ import 'reflect-metadata';
 import type { NodePgDatabase } from '@account-book-app/db';
 import { Container } from 'inversify';
 import type { ICategoryRepository } from '../../domain/repositories/category.repository.interface';
+import type { ITokenBlacklistRepository } from '../../domain/repositories/token-blacklist.repository.interface';
 import type { ITransactionRepository } from '../../domain/repositories/transaction.repository.interface';
 import type { IUserRepository } from '../../domain/repositories/user.repository.interface';
 import { CreateJwtService } from '../../services/auth/create-jwt.service';
+import type { IVerifyJwtTokenProvider } from '../../services/auth/verify-jwt.service';
 import { CreateCategoryUseCase } from '../../services/categories/create.category.service';
 import { GetCategoryUseCase } from '../../services/categories/get-category.service';
 import { ListCategoriesUseCase } from '../../services/categories/list-categories.service';
@@ -16,9 +18,11 @@ import { DeleteTransactionUseCase } from '../../services/transactions/delete-tra
 import { ListTransactionsUseCase } from '../../services/transactions/list-transactions.service';
 import { UpdateTransactionUseCase } from '../../services/transactions/update-transaction.service';
 import { LoginUserUseCase } from '../../services/users/login-user.service';
+import { LogoutUserUseCase } from '../../services/users/logout-user.service';
 import { RegisterUserUseCase } from '../../services/users/register-user.service';
-import { CreateJwtProvider } from '../auth/jwt';
+import { CreateJwtProvider, VerifyJwtProvider } from '../auth/jwt';
 import { CategoryRepository } from '../repositories/category.repository';
+import { TokenBlacklistRepository } from '../repositories/token-blacklist.repository';
 import { TransactionRepository } from '../repositories/transaction.repository';
 import { UserRepository } from '../repositories/user.repository';
 
@@ -78,8 +82,20 @@ export const createRequestContainer = (db: NodePgDatabase) => {
     .to(LoginUserUseCase);
 
   container
+    .bind<LogoutUserUseCase>(TOKENS.LogoutUserUseCase)
+    .to(LogoutUserUseCase);
+
+  container
+    .bind<ITokenBlacklistRepository>(TOKENS.TokenBlacklistRepository)
+    .to(TokenBlacklistRepository);
+
+  container
     .bind<CreateJwtProvider>(TOKENS.CreateJwtTokenProvider)
     .to(CreateJwtProvider);
+
+  container
+    .bind<IVerifyJwtTokenProvider>(TOKENS.VerifyJwtTokenProvider)
+    .to(VerifyJwtProvider);
 
   container
     .bind<CreateJwtService>(TOKENS.CreateJwtService)

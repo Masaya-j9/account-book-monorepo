@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import { categories } from "../schema/categories.js";
 import { currencies } from "../schema/currencies.js";
+import { tokenBlacklists } from "../schema/token-blacklists.js";
 import { transactionCategories } from "../schema/transaction-categories.js";
 import { transactionTypes } from "../schema/transaction-types.js";
 import { transactions } from "../schema/transactions.js";
@@ -11,6 +12,7 @@ import { users } from "../schema/users.js";
 export const usersRelations = relations(users, ({ many }) => ({
 	transactions: many(transactions),
 	userCategories: many(userCategories),
+	tokenBlacklists: many(tokenBlacklists),
 }));
 
 // transaction_types relations
@@ -83,3 +85,14 @@ export const transactionCategoriesRelations = relations(
 export const currenciesRelations = relations(currencies, ({ many }) => ({
 	transactions: many(transactions),
 }));
+
+// token_blacklists relations
+export const tokenBlacklistsRelations = relations(
+	tokenBlacklists,
+	({ one }) => ({
+		user: one(users, {
+			fields: [tokenBlacklists.userId],
+			references: [users.id],
+		}),
+	}),
+);

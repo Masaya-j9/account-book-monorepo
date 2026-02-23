@@ -24,6 +24,19 @@ entity "users" {
 }
 
 ' =====================================
+' トークンブラックリスト
+' =====================================
+
+entity "token_blacklists" {
+  * id: INTEGER <<PK, AUTO_INCREMENT>>
+  --
+  * token_identifier: VARCHAR(255) <<UNIQUE>>
+  * user_id: INTEGER <<FK>>
+  * expires_at: TIMESTAMP
+  * created_at: TIMESTAMP
+}
+
+' =====================================
 ' 通貨マスター
 ' =====================================
 
@@ -113,6 +126,18 @@ entity "transactions" {
 ' =====================================
 ' インデックス定義
 ' =====================================
+
+note right of token_blacklists
+  **【目的】**
+  - ログアウト済みの JWT トークンを無効化する
+  - token_identifier: "{sub}:{iat}" の形式で一意に識別
+  - expires_at: JWT の exp に対応。期限切れ後は不要
+
+  **【ビジネスルール】**
+  - ログアウト時にトークンをこのテーブルへ登録
+  - 認証ミドルウェアがリクエストごとに存在チェック
+  - ユーザー退会時は CASCADE で自動削除
+end note
 
 note right of currencies
   **【マスターデータ】**

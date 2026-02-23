@@ -1,7 +1,7 @@
 // Presentation Layer: tRPC Context
 // リクエストごとのコンテキスト設定
 
-import type { NodePgDatabase } from '@account-book-app/db';
+import { eq, type NodePgDatabase, tokenBlacklists } from '@account-book-app/db';
 import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
 import {
   type JwtVerifyError,
@@ -11,7 +11,8 @@ import { Effect, pipe } from '../../shared/result';
 
 export interface Context extends Record<string, unknown> {
   db: NodePgDatabase;
-  userId?: number; // 認証実装後に使用
+  userId?: number;
+  token?: string; // logout 時に使用するオリジナルトークン文字列
 }
 
 export const createContext = (
@@ -20,11 +21,12 @@ export const createContext = (
   return async (opts: FetchCreateContextFnOptions) => {
     const authorization = opts.req.headers.get('authorization');
     const token = getBearerToken(authorization);
-    const userId = token ? await resolveUserId(token) : undefined;
+    const userId = token ? await resolveUserId(token, db) : undefined;
 
     return {
       db,
       userId,
+      token,
     };
   };
 };
@@ -38,7 +40,10 @@ const getBearerToken = (authorization: string | null): string | undefined => {
   return scheme?.toLowerCase() === 'bearer' && token ? token : undefined;
 };
 
-const resolveUserId = async (token: string): Promise<number | undefined> => {
+const resolveUserId = async (
+  token: string,
+  db: NodePgDatabase,
+): Promise<number | undefined> => {
   const payload = await Effect.runPromise(
     pipe(
       verifyAccessTokenEffect(token),
@@ -55,7 +60,26 @@ const resolveUserId = async (token: string): Promise<number | undefined> => {
   }
 
   const userId = Number(payload.sub);
-  return Number.isInteger(userId) && userId > 0 ? userId : undefined;
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return undefined;
+  }
+
+  // ブラックリストチェック: ログアウト済みトークンは無効
+  const tokenIdentifier = `${payload.sub}:${payload.iat}`;
+  const [blacklisted] = await db
+    .select({ id: tokenBlacklists.id })
+    .from(tokenBlacklists)
+    .where(eq(tokenBlacklists.tokenIdentifier, tokenIdentifier))
+    .limit(1);
+
+  if (blacklisted) {
+    console.warn('[auth] ログアウト済みのトークンが使用されました', {
+      tokenIdentifier,
+    });
+    return undefined;
+  }
+
+  return userId;
 };
 
 const logJwtVerifyError = (error: JwtVerifyError): void => {
