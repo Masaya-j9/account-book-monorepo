@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TOKENS } from '../../services/di/tokens';
 import { InvalidCredentialsError } from '../../services/users/login-user.errors';
+import { UnexpectedLogoutUserError } from '../../services/users/logout-user.errors';
 import {
   EmailAlreadyExistsError,
   InvalidPasswordError,
@@ -196,6 +197,63 @@ describe('userRouter - login（ログイン）', () => {
       expect(error).toMatchObject({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'ログインに失敗しました',
+      });
+    });
+  });
+});
+
+describe('userRouter - logout（ログアウト）', () => {
+  const db = {} as NodePgDatabase;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('正常系', () => {
+    it('認証済みユーザーがログアウトすると { success: true } が返る', async () => {
+      executeMock.mockResolvedValueOnce({ success: true });
+
+      const caller = userRouter.createCaller({
+        db,
+        userId: 1,
+        token: 'valid-jwt-token',
+      });
+
+      const result = await caller.logout();
+
+      expect(createRequestContainerMock).toHaveBeenCalledWith(db);
+      expect(getMock).toHaveBeenCalledWith(TOKENS.LogoutUserUseCase);
+      expect(executeMock).toHaveBeenCalledWith({ token: 'valid-jwt-token' });
+      expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('異常系', () => {
+    it('未認証の場合は UNAUTHORIZED になる', async () => {
+      const caller = userRouter.createCaller({ db });
+
+      await expect(caller.logout()).rejects.toMatchObject({
+        code: 'UNAUTHORIZED',
+      });
+    });
+
+    it('想定外のエラーは INTERNAL_SERVER_ERROR になる', async () => {
+      executeMock.mockRejectedValueOnce(
+        new UnexpectedLogoutUserError({ message: 'ログアウトに失敗しました' }),
+      );
+
+      const caller = userRouter.createCaller({
+        db,
+        userId: 1,
+        token: 'valid-jwt-token',
+      });
+
+      const error = await caller.logout().catch((e) => e);
+
+      expect(error).toBeInstanceOf(TRPCError);
+      expect(error).toMatchObject({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'ログアウトに失敗しました',
       });
     });
   });

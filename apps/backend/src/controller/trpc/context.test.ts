@@ -13,8 +13,17 @@ vi.mock('../../infrastructre/auth/jwt', () => ({
 
 import { createContext } from './context';
 
+// Drizzle の select チェーン（トークンブラックリスト検索）をモックする
+const makeMockDb = (): NodePgDatabase => {
+  const limitMock = vi.fn().mockResolvedValue([]);
+  const whereMock = vi.fn().mockReturnValue({ limit: limitMock });
+  const fromMock = vi.fn().mockReturnValue({ where: whereMock });
+  const selectMock = vi.fn().mockReturnValue({ from: fromMock });
+  return { select: selectMock } as unknown as NodePgDatabase;
+};
+
 describe('createContext（tRPCコンテキスト）', () => {
-  const db = {} as NodePgDatabase;
+  let db: NodePgDatabase;
 
   const createOptions = (
     authorization?: string,
@@ -33,6 +42,7 @@ describe('createContext（tRPCコンテキスト）', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    db = makeMockDb();
   });
 
   describe('正常系', () => {
@@ -71,6 +81,7 @@ describe('createContext（tRPCコンテキスト）', () => {
       expect(result).toEqual({
         db,
         userId: 123,
+        token: 'valid.token',
       });
     });
   });
@@ -84,6 +95,7 @@ describe('createContext（tRPCコンテキスト）', () => {
       expect(result).toEqual({
         db,
         userId: undefined,
+        token: undefined,
       });
     });
 
@@ -95,6 +107,7 @@ describe('createContext（tRPCコンテキスト）', () => {
       expect(result).toEqual({
         db,
         userId: undefined,
+        token: undefined,
       });
     });
 
@@ -116,6 +129,7 @@ describe('createContext（tRPCコンテキスト）', () => {
       expect(result).toEqual({
         db,
         userId: undefined,
+        token: 'invalid.token',
       });
     });
 
@@ -136,6 +150,7 @@ describe('createContext（tRPCコンテキスト）', () => {
       expect(result).toEqual({
         db,
         userId: undefined,
+        token: 'valid.token',
       });
     });
 
@@ -160,6 +175,7 @@ describe('createContext（tRPCコンテキスト）', () => {
         expect(result).toEqual({
           db,
           userId: undefined,
+          token: 'valid.token',
         });
       },
     );

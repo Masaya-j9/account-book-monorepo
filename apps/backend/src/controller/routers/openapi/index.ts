@@ -19,6 +19,15 @@ export const registerOpenApi = (app: OpenAPIHono, db: NodePgDatabase) => {
         description: 'Current environment',
       },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
   }));
 
   app.get('/doc', swaggerUI({ url: '/openapi.json' }));
