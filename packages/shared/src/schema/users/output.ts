@@ -12,3 +12,8 @@ export type UsersRegisterOutput = z.infer<typeof usersRegisterOutputSchema>;
 
 export const usersLoginOutputSchema = authOutputSchema;
 export type UsersLoginOutput = z.infer<typeof usersLoginOutputSchema>;
+
+export const usersLogoutOutputSchema = z.object({
+  success: z.boolean(),
+});
+export type UsersLogoutOutput = z.infer<typeof usersLogoutOutputSchema>;
