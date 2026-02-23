@@ -3,7 +3,7 @@ import { DomainError } from '../../domain/values/domain-error';
 export class InvalidCredentialsError extends DomainError {
   constructor() {
     super(
-      'メールアドレスまたはパスワードが正しくありません',
+      'メールアドレス、ユーザー名またはパスワードが正しくありません',
       'InvalidCredentialsError',
     );
   }
