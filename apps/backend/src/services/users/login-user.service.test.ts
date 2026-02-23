@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { User } from '../../domain/entities/user.entity';
 import type { IUserRepository } from '../../domain/repositories/user.repository.interface';
 import { PasswordHash } from '../../domain/values/password-hash';
+
 import type { ICreateJwtService } from '../auth/create-jwt.service';
 import { TOKENS } from '../di/tokens';
 import { InvalidCredentialsError } from './login-user.errors';
@@ -54,7 +55,7 @@ describe('LoginUserUseCase（ログイン）', () => {
 
   describe('正常系', () => {
     it('正しい認証情報でログインするとトークンを返す', async () => {
-      vi.spyOn(PasswordHash.prototype, 'matches').mockResolvedValue(true);
+      vi.spyOn(User.prototype, 'verifyPassword').mockResolvedValue(true);
 
       const { useCase, repo, createJwtService } = setup();
 
@@ -87,7 +88,7 @@ describe('LoginUserUseCase（ログイン）', () => {
     });
 
     it('ユーザー名が誤っている場合は InvalidCredentialsError', async () => {
-      vi.spyOn(PasswordHash.prototype, 'matches').mockResolvedValue(true);
+      vi.spyOn(User.prototype, 'verifyPassword').mockResolvedValue(true);
 
       const { useCase } = setup();
 
@@ -101,7 +102,7 @@ describe('LoginUserUseCase（ログイン）', () => {
     });
 
     it('パスワードが誤っている場合は InvalidCredentialsError', async () => {
-      vi.spyOn(PasswordHash.prototype, 'matches').mockResolvedValue(false);
+      vi.spyOn(User.prototype, 'verifyPassword').mockResolvedValue(false);
 
       const { useCase } = setup();
 

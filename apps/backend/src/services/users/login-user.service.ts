@@ -106,7 +106,7 @@ export class LoginUserUseCase {
     input: UserFoundInput,
   ): Effect.Effect<PublicUserRecord, LoginUserError> {
     return pipe(
-      Effect.promise(() => input.user.passwordHash.matches(input.password)),
+      Effect.promise(() => input.user.verifyPassword(input.password)),
       Effect.mapError((cause) =>
         this.createUnexpectedError('パスワードの検証に失敗しました', cause),
       ),

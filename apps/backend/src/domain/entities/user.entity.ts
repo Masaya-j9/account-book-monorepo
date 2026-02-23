@@ -84,6 +84,10 @@ export class User {
     return this._id === other._id;
   }
 
+  async verifyPassword(plainText: string): Promise<boolean> {
+    return this._passwordHash.matches(plainText);
+  }
+
   private static validateEmail(email: string): void {
     if (!EMAIL_REGEX.test(email)) {
       throw new UserDomainError('メールアドレスの形式が不正です');
