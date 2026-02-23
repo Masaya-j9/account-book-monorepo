@@ -13,6 +13,8 @@ export const TOKENS = {
   DeleteTransactionUseCase: Symbol.for('DeleteTransactionUseCase'),
   RegisterUserUseCase: Symbol.for('RegisterUserUseCase'),
   LoginUserUseCase: Symbol.for('LoginUserUseCase'),
+  LogoutUserUseCase: Symbol.for('LogoutUserUseCase'),
+  TokenBlacklistRepository: Symbol.for('TokenBlacklistRepository'),
   CreateJwtService: Symbol.for('CreateJwtService'),
   CreateJwtTokenProvider: Symbol.for('CreateJwtTokenProvider'),
 } as const;
