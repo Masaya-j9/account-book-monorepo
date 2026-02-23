@@ -21,6 +21,7 @@ skinparam class {
 ' 1. ユーザー関連
 users ||--o{ transactions
 users ||--o{ user_categories
+users ||--o{ token_blacklists
 
 ' 2. 取引タイプ関連
 transaction_types ||--o{ categories
@@ -67,6 +68,14 @@ note as ForeignKeyNote
   │   ON DELETE: RESTRICT                       │
   │   ON UPDATE: CASCADE                        │
   │   理由: マスターデータは削除不可              │
+  └─────────────────────────────────────────────┘
+
+  **token_blacklists テーブル**
+  ┌─────────────────────────────────────────────┐
+  │ user_id → users.id                          │
+  │   ON DELETE: CASCADE                        │
+  │   ON UPDATE: CASCADE                        │
+  │   理由: ユーザー削除時にブラックリストも削除 │
   └─────────────────────────────────────────────┘
 
   **transaction_categories テーブル**
