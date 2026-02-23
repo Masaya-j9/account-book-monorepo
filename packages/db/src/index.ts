@@ -1,4 +1,4 @@
-export { and, asc, count, desc, eq, sql } from "drizzle-orm";
+export { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
 export type { NodePgDatabase } from "drizzle-orm/node-postgres";
 export { db } from "./db.js";
 export * from "./relations/index.js";
